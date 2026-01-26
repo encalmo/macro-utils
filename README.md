@@ -61,7 +61,6 @@ or with SCALA-CLI
 ├── JavaRecordUtils.test.scala
 ├── JavaRecordUtilsTestMacro.test.scala
 ├── LICENSE
-├── macro-utils_3-0.9.0.zip
 ├── MethodUtils.scala
 ├── OpaqueTypeUtils.scala
 ├── OpaqueTypeUtils.test.scala
