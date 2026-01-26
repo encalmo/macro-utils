@@ -6,8 +6,6 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 
 ### Provided Utility Objects
 
-- `TypeNameUtils`
-- `TypeUtils`
 - `CaseClassUtils` visit and transfrom case class fields, names and values
 - `EnumUtils` visit enums and sealed ADT hierarchies, and Java's enums, and build case pattern matcher
 - `UnionUtils` visit types of the union

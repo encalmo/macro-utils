@@ -5,3 +5,4 @@
 .cursor/
 _site/
 .cursor/mcp.json
+*.zip
