@@ -29,11 +29,11 @@ jobs:
     steps:
       - id: release
         name: Create and upload new release bundles
-        uses: encalmo/create-new-release-action@v1.4.3
+        uses: encalmo/create-new-release-action@v1.6.1
         with:
           tag-prefix: 'version'
           version-bump: ${{ inputs.version-bump || 'patch' }}
-          release-flags: '--native'
+          release-flags: '--native --js'
           github-token:  ${{ secrets.GITHUB_TOKEN }}
           sonatype-token: ${{ secrets.SONATYPE_TOKEN }}
           gpg-secret-key-base64: ${{ secrets.GPG_SECRET_KEY }}
