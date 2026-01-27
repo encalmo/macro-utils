@@ -30,11 +30,11 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.1"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.2"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.1
+    //> using dep org.encalmo::macro-utils:0.9.2
 
 ## Project content
 
@@ -62,6 +62,8 @@ or with SCALA-CLI
 ├── JavaRecordUtilsTestMacro.test.scala
 ├── LICENSE
 ├── MethodUtils.scala
+├── MethodUtils.test.scala
+├── MethodUtilsTestMacro.test.scala
 ├── OpaqueTypeUtils.scala
 ├── OpaqueTypeUtils.test.scala
 ├── OpaqueUtilsTestMacro.test.scala
