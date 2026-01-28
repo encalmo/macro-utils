@@ -31,7 +31,7 @@ object MethodUtilsTestMacro {
     }
   }
 
-  inline def testWrapInMethodCallWithCache(methodName: String, methodBody: Unit): Unit = {
+  inline def testWrapInMethodCallWithCache(methodName: String, methodBody: => Unit): Unit = {
     ${ testWrapInMethodCallWithCacheImpl('{ methodName }, '{ methodBody }) }
   }
 
