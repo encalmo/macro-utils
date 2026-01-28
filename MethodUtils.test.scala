@@ -49,4 +49,8 @@ class MethodUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("wrap in a method call") {
+    testWrapInMethodCallWithCache("foo", { println("foo") })
+  }
+
 }

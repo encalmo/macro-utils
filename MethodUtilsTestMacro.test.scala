@@ -15,16 +15,38 @@ object MethodUtilsTestMacro {
       var result: String = ""
       ${
         maybeSelectedValue(
-          selectorExpr.valueOrAbort, 
-          selectorExpr, 
-          exprExpr, 
+          selectorExpr.valueOrAbort,
+          selectorExpr,
+          exprExpr,
           functionExpr = { [A: Type] => Quotes ?=> (name, value) =>
-            '{ result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } 
-            + " = " + ${value}}},
-          fallbackExpr = '{ result ="selector not found" }
+            '{
+              result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
+                + " = " + ${ value }
+            }
+          },
+          fallbackExpr = '{ result = "selector not found" }
         )
       }
       result
     }
+  }
+
+  inline def testWrapInMethodCallWithCache(methodName: String, methodBody: Unit): Unit = {
+    ${ testWrapInMethodCallWithCacheImpl('{ methodName }, '{ methodBody }) }
+  }
+
+  def testWrapInMethodCallWithCacheImpl(
+      methodNameExpr: Expr[String],
+      methodBodyExpr: Expr[Unit]
+  )(using Quotes): Expr[Unit] = {
+    import quotes.reflect.*
+    val cache = new MethodsCache
+    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    val result = cache.getBlockExpr
+    report.warning(result.asTerm.show(using Printer.TreeStructure))
+    result
   }
 }
