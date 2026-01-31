@@ -35,11 +35,11 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.4"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.5"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.4
+    //> using dep org.encalmo::macro-utils:0.9.5
 
 ## Examples
 
@@ -180,7 +180,6 @@ def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(usin
 ├── JavaRecordUtils.test.scala
 ├── JavaRecordUtilsTestMacro.test.scala
 ├── LICENSE
-├── MethodsCache.scala
 ├── MethodUtils.scala
 ├── MethodUtils.test.scala
 ├── MethodUtilsTestMacro.test.scala
@@ -191,6 +190,7 @@ def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(usin
 ├── project.scala
 ├── README.md
 ├── SelectableUtils.scala
+├── StatementsCache.scala
 ├── Status.java
 ├── test.sh
 ├── TestModel.test.scala
