@@ -69,7 +69,7 @@ object CaseClassUtilsTestMacro {
 
   def upperCaseStringFieldsImpl[T: Type, R <: Product: Type](value: Expr[T])(using Quotes): Expr[R] = {
     import quotes.reflect.*
-    val args = CaseClassUtils.transformToList[T, quotes.reflect.Term](
+    val args: List[quotes.reflect.Term] = CaseClassUtils.transformToList[T, quotes.reflect.Term](
       value,
       [A: Type] =>
         (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>
@@ -90,7 +90,7 @@ object CaseClassUtilsTestMacro {
     ${ upperCaseStringFields2Impl[T, R]('value) }
 
   def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(using Quotes): Expr[R] = {
-    val tuple = CaseClassUtils.transformToExprOfTuple[T](
+    val tuple: Expr[Tuple] = CaseClassUtils.transformToExprOfTuple[T](
       value,
       [A: Type] =>
         (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>

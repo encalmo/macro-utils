@@ -91,22 +91,31 @@ inline def upperCaseStringFields[T, R <: Product](inline value: T): R =
 
 def upperCaseStringFieldsImpl[T: Type, R <: Product: Type](value: Expr[T])(using Quotes): Expr[R] = {
   import quotes.reflect.*
-  val args = CaseClassUtils.transformToList[T, quotes.reflect.Term](
-    value,
-    [A: Type] =>
-      (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>
-        Some {
-          Type.of[A] match {
-            case '[String] =>
-              '{ ${ valueExpr.asExprOf[String] }.toUpperCase }.asTerm
-            case _ =>
-              valueExpr.asTerm
+  val args: List[quotes.reflect.Term] = 
+    CaseClassUtils.transformToList[T, quotes.reflect.Term](
+      value,
+      [A: Type] =>
+        (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>
+          Some {
+            Type.of[A] match {
+              case '[String] =>
+                '{ ${ valueExpr.asExprOf[String] }.toUpperCase }.asTerm
+              case _ =>
+                valueExpr.asTerm
+            }
           }
-        }
-  )
+    )
 
   CaseClassUtils.createInstanceUsingConstructor[R](args)
 }
+```
+
+**Usage:**
+
+```scala
+ case class User(name: String, email: String, age: Int)
+  val user = User("alice", "alice@example.com", 30)
+  assert(upperCaseStringFields[User, User](user) == User("ALICE", "ALICE@EXAMPLE.COM", 30))
 ```
 
 ### Example: Using `CaseClassUtils.transformToExprOfTuple` to create a tuple from case class fields
@@ -118,44 +127,33 @@ import org.encalmo.utils.CaseClassUtils
 import org.encalmo.utils.AnnotationUtils.AnnotationInfo
 import scala.quoted.*
 
-inline def extractFieldTuple[T](inline value: T): Tuple =
-  ${ extractFieldTupleImpl[T]('value) }
+inline def upperCaseStringFields2[T, R <: Product](inline value: T): R =
+  ${ upperCaseStringFields2Impl[T, R]('value) }
 
-def extractFieldTupleImpl[T: Type](value: Expr[T])(using Quotes): Expr[Tuple] = {
-  CaseClassUtils.transformToExprOfTuple[T](
+def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(using Quotes): Expr[R] = {
+   val tuple: Expr[Tuple] = CaseClassUtils.transformToExprOfTuple[T](
     value,
     [A: Type] =>
       (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>
-        // For demonstration, we just put the value itself into the tuple
-        Some(valueExpr)
+        Some {
+          Type.of[A] match
+            case '[String] =>
+              '{ ${ valueExpr.asExprOf[String] }.toUpperCase }
+            case _ =>
+              valueExpr
+        }
   )
+  CaseClassUtils.createInstanceFromTuple[R](tuple)
 }
 ```
 
 **Usage:**
 
 ```scala
-case class Foo(a: String, b: Int)
-val foo = Foo("bar", 42)
-val tup = extractFieldTuple(foo)
-assert(tup == ("bar", 42))
+ case class User(name: String, email: String, age: Int)
+  val user = User("alice", "alice@example.com", 30)
+  assert(upperCaseStringFields2[User, User](user) == User("ALICE", "ALICE@EXAMPLE.COM", 30))
 ```
-
-This will produce a tuple containing all the field values in order: `("bar", 42)` for the example above.
-
-
-**Usage:**
-
-```scala
-case class User(name: String, email: String, age: Int)
-val user = User("alice", "alice@example.com", 30)
-assertEquals(
-    upperCaseStringFields(user), 
-     User("ALICE", "ALICE@EXAMPLE.COM", 30)
-)
-```
-
-
 
 ## Project content
 
