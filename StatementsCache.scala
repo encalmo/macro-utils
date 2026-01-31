@@ -2,7 +2,7 @@ package org.encalmo.utils
 
 import scala.quoted.*
 
-class MethodsCache(implicit val quotes: Quotes) {
+class StatementsCache(implicit val quotes: Quotes) {
   import quotes.reflect.*
 
   private val index: collection.mutable.Map[String, Statement] =
@@ -41,12 +41,24 @@ class MethodsCache(implicit val quotes: Quotes) {
     }
   }
 
+  def addStatement(statement: Statement): Unit = {
+    statements.append(statement)
+  }
+
+  def addStatements(statements: Iterable[Statement]): Unit = {
+    this.statements.appendAll(statements)
+  }
+
   def getStatements: List[Statement] = {
     statements.toList
   }
 
   def getBlockExprOfUnit: Expr[Unit] = {
     Block(statements.toList, '{}.asTerm).asExprOf[Unit]
+  }
+
+  def getBlockExprOf[T: Type](valueExpr: Expr[T]): Expr[T] = {
+    Block(statements.toList, valueExpr.asTerm).asExprOf[T]
   }
 
 }
