@@ -11,6 +11,7 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 - `UnionUtils` visit types of the union
 - `TupleUtils` visit tuple and named tuple elements
 - `OpaqueTypeUtils` unwrap the type is possible
+- `SelectableUtils` maybe visit selectable fields
 - `JavaRecordUtils` visit record fields, names and values
 - `JavaMapUtils` visit Java's Map names and values
 - `JavaIterableUtils` visit Java' iterables

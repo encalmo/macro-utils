@@ -15,16 +15,35 @@ object MethodUtilsTestMacro {
       var result: String = ""
       ${
         maybeSelectedValue(
-          selectorExpr.valueOrAbort, 
-          selectorExpr, 
-          exprExpr, 
+          selectorExpr.valueOrAbort,
+          selectorExpr,
+          exprExpr,
           functionExpr = { [A: Type] => Quotes ?=> (name, value) =>
-            '{ result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } 
-            + " = " + ${value}}},
-          fallbackExpr = '{ result ="selector not found" }
+            '{
+              result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
+                + " = " + ${ value }
+            }
+          },
+          fallbackExpr = '{ result = "selector not found" }
         )
       }
       result
     }
+  }
+
+  inline def testWrapInMethodCallWithCache(inline times: Int, methodName: String, methodBody: => Unit): Unit = {
+    ${ testWrapInMethodCallWithCacheImpl('{ times }, '{ methodName }, '{ methodBody }) }
+  }
+
+  def testWrapInMethodCallWithCacheImpl(
+      timesExpr: Expr[Int],
+      methodNameExpr: Expr[String],
+      methodBodyExpr: Expr[Unit]
+  )(using Quotes): Expr[Unit] = {
+    val cache = new MethodsCache
+    for (i <- 0 until timesExpr.valueOrAbort) {
+      cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    }
+    cache.getBlockExprOfUnit
   }
 }

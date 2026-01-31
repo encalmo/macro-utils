@@ -30,8 +30,9 @@ object MethodUtils {
     ).asExprOf[T]
   }
 
-  /** Maybe select a value from expression using a selector and call the provided function if found, 
-   * or call fallback function if not found. */
+  /** Maybe select a value from expression using a selector and call the provided function if found, or call fallback
+    * function if not found.
+    */
   def maybeSelectedValue[T: Type](
       selector: String,
       label: Expr[String],
@@ -77,9 +78,10 @@ object MethodUtils {
           }
 
         val select = Select(expr.asTerm, sym)
-        val term = if (sym.paramSymss == List(Nil)) 
-          then Apply(select, Nil) 
-          else select   
+        val term =
+          if (sym.paramSymss == List(Nil))
+          then Apply(select, Nil)
+          else select
 
         actualType.asType match {
           case '[a] =>

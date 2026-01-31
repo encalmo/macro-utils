@@ -49,4 +49,10 @@ class MethodUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("wrap in a method call") {
+    val buffer = collection.mutable.ListBuffer.empty[String]
+    testWrapInMethodCallWithCache(4, "foo", { buffer.append("foo") })
+    assertEquals(buffer.size, 4)
+  }
+
 }
