@@ -35,11 +35,11 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.2"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.3"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.2
+    //> using dep org.encalmo::macro-utils:0.9.3
 
 ## Examples
 
