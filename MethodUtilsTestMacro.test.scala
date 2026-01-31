@@ -31,22 +31,19 @@ object MethodUtilsTestMacro {
     }
   }
 
-  inline def testWrapInMethodCallWithCache(methodName: String, methodBody: => Unit): Unit = {
-    ${ testWrapInMethodCallWithCacheImpl('{ methodName }, '{ methodBody }) }
+  inline def testWrapInMethodCallWithCache(inline times: Int, methodName: String, methodBody: => Unit): Unit = {
+    ${ testWrapInMethodCallWithCacheImpl('{ times }, '{ methodName }, '{ methodBody }) }
   }
 
   def testWrapInMethodCallWithCacheImpl(
+      timesExpr: Expr[Int],
       methodNameExpr: Expr[String],
       methodBodyExpr: Expr[Unit]
   )(using Quotes): Expr[Unit] = {
-    import quotes.reflect.*
     val cache = new MethodsCache
-    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
-    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
-    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
-    cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
-    val result = cache.getBlockExpr
-    report.warning(result.asTerm.show(using Printer.TreeStructure))
-    result
+    for (i <- 0 until timesExpr.valueOrAbort) {
+      cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+    }
+    cache.getBlockExprOfUnit
   }
 }
