@@ -56,7 +56,7 @@ inline def printCaseClassFields[T](inline value: T): Unit = ${ printCaseClassFie
   def printCaseClassFieldsImpl[T: Type](value: Expr[T])(using Quotes): Expr[Unit] = {
     CaseClassUtils.visit[T](
       value,
-      [A: Type] => (nameExpr], valueExpr, annotations) =>
+      [A: Type] => (nameExpr, valueExpr, annotations) =>
           '{ println(${ nameExpr } + ": " + ${ valueExpr }.toString) }
     )
   }
