@@ -62,6 +62,7 @@ or with SCALA-CLI
 ├── JavaRecordUtils.test.scala
 ├── JavaRecordUtilsTestMacro.test.scala
 ├── LICENSE
+├── MethodsCache.scala
 ├── MethodUtils.scala
 ├── MethodUtils.test.scala
 ├── MethodUtilsTestMacro.test.scala
