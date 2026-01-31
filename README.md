@@ -21,6 +21,10 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
    - [Provided Utility Objects](#provided-utility-objects)
 - [Dependencies](#dependencies)
 - [Usage](#usage)
+- [Examples](#examples)
+   - [Example: Using `CaseClassUtils.visit` to Inspect Case Class Fields](#example:-using-`caseclassutils.visit`-to-inspect-case-class-fields)
+   - [Example: Using `CaseClassUtils.transformToList` to create an instance with all string values upper cased](#example:-using-`caseclassutils.transformtolist`-to-create-an-instance-with-all-string-values-upper-cased)
+   - [Example: Using `CaseClassUtils.transformToExprOfTuple` to create a tuple from case class fields](#example:-using-`caseclassutils.transformtoexproftuple`-to-create-a-tuple-from-case-class-fields)
 - [Project content](#project-content)
 
 ## Dependencies
@@ -31,11 +35,11 @@ Macro-utils is a Scala 3 library providing some helpers for building macros. Use
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.3"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.2"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.3
+    //> using dep org.encalmo::macro-utils:0.9.2
 
 ## Examples
 
