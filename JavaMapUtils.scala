@@ -1,5 +1,3 @@
-
-
 package org.encalmo.utils
 
 import scala.quoted.*

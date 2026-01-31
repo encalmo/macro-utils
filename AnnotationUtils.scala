@@ -37,6 +37,26 @@ object AnnotationUtils {
       .annotations
   }
 
+  def computeFieldAnnotations[A: Type](
+      fieldName: String
+  )(using Quotes): Set[AnnotationInfo] = {
+    import quotes.reflect.*
+    TypeRepr
+      .of[A]
+      .typeSymbol
+      .primaryConstructor
+      .paramSymss
+      .flatten
+      .find(_.name == fieldName)
+      .getOrElse(
+        report.errorAndAbort(
+          s"Field '$fieldName' not found in ${TypeRepr.of[A].typeSymbol.name}"
+        )
+      )
+      .annotations
+      .computeInfo
+  }
+
   def getValueAnnotations[A: Type](value: Expr[A])(using Quotes): Set[AnnotationInfo] = {
     import quotes.reflect.*
     // STEP 1: Unwrap the 'Inlined' wrapper to get the actual variable reference

@@ -67,4 +67,30 @@ class CaseClassUtilsSpec extends munit.FunSuite {
     assertEquals(testIsCaseClass[Name | false], false)
     assertEquals(testIsCaseClass[NonEmptyTuple], false)
   }
+
+  test("print case class fields") {
+    case class Person(name: String, age: Int)
+    printCaseClassFields(Person("Alice", 30))
+  }
+
+  test("upper case string fields") {
+    case class User(name: String, email: String, age: Int)
+    val user = User("alice", "alice@example.com", 30)
+    assertEquals(
+      upperCaseStringFields[User, User](user),
+      User("ALICE", "ALICE@EXAMPLE.COM", 30)
+    )
+  }
+
+  test("upper case string fields 2") {
+    case class User(name: String, email: String, age: Int)
+    val user = User("alice", "alice@example.com", 30)
+    assertEquals(upperCaseStringFields2[User, User](user), User("ALICE", "ALICE@EXAMPLE.COM", 30))
+  }
+
+  test("extract field tuple") {
+    case class User(name: String, email: String, age: Int)
+    val user = User("alice", "alice@example.com", 30)
+    assertEquals(extractFieldTuple[User](user), ("alice", "alice@example.com", 30))
+  }
 }

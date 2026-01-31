@@ -1,6 +1,5 @@
 package org.encalmo.utils
 
-
 import EnumUtils.*
 import scala.quoted.*
 
@@ -20,14 +19,14 @@ object EnumUtilsTestMacro {
     val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
     visit[A](
       valueExpr,
-      functionWhenCaseValueExpr = { [A: Type] => Quotes ?=> (name, value, annotations) =>
+      functionWhenCaseValueExpr = { [A: Type] => (name, value, annotations) =>
         val expr = '{
           "case " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
         }
         buffer += expr
         '{}
       },
-      functionWhenCaseClassExpr = { [A: Type] => Quotes ?=> (name, value, annotations) =>
+      functionWhenCaseClassExpr = { [A: Type] => (name, value, annotations) =>
         val expr = '{
           "case _: " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
         }

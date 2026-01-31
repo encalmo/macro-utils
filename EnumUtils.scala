@@ -1,8 +1,8 @@
-
-
 package org.encalmo.utils
 
 import scala.quoted.*
+import org.encalmo.utils.AnnotationUtils.AnnotationInfo
+import org.encalmo.utils.AnnotationUtils.computeInfo
 
 object EnumUtils {
 
@@ -33,15 +33,15 @@ object EnumUtils {
     */
   def visit[In: Type](
       valueExpr: Expr[In],
-      functionWhenCaseValueExpr: [A: Type] => Quotes ?=> (
+      functionWhenCaseValueExpr: [A: Type] => (
           Expr[String],
           Expr[A],
-          List[quotes.reflect.Term]
+          Set[AnnotationInfo]
       ) => Expr[Any],
-      functionWhenCaseClassExpr: [A: Type] => Quotes ?=> (
+      functionWhenCaseClassExpr: [A: Type] => (
           Expr[String],
           Expr[A],
-          List[quotes.reflect.Term]
+          Set[AnnotationInfo]
       ) => Expr[Any]
   )(using quotes: Quotes): Expr[Unit] = {
     import quotes.reflect.*
@@ -103,13 +103,13 @@ object EnumUtils {
                   functionWhenCaseValueExpr.apply[t](
                     Expr(enumCase.name),
                     '{ $valueExpr.asInstanceOf[t] },
-                    enumCaseSymbol.annotations
+                    enumCaseSymbol.annotations.computeInfo
                   )
                 else
                   functionWhenCaseClassExpr.apply[t](
                     Expr(enumCase.name),
                     '{ $valueExpr.asInstanceOf[t] },
-                    enumCaseSymbol.annotations
+                    enumCaseSymbol.annotations.computeInfo
                   )
             }
 
