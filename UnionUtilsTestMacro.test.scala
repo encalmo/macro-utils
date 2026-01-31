@@ -1,6 +1,5 @@
 package org.encalmo.utils
 
-
 import UnionUtils.*
 import scala.quoted.*
 
@@ -21,7 +20,7 @@ object UnionUtilsTestMacro {
     visit[A](
       Expr("union"),
       valueExpr,
-      { [A: Type] => Quotes ?=> (name, value) =>
+      { [A: Type] => (name, value) =>
         val expr = '{
           "case _: " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
         }

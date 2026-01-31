@@ -1,5 +1,3 @@
-
-
 package org.encalmo.utils
 
 import scala.quoted.*
@@ -17,14 +15,8 @@ object OpaqueTypeUtils {
   def visit[In: Type](
       label: Expr[String],
       valueExpr: Expr[In],
-      functionWhenOpaqueTypeExpr: [A: Type] => Quotes ?=> (
-          Expr[String],
-          Expr[A]
-      ) => Expr[Any],
-      functionWhenOtherExpr: [A: Type] => Quotes ?=> (
-          Expr[String],
-          Expr[A]
-      ) => Expr[Any]
+      functionWhenOpaqueTypeExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Any],
+      functionWhenOtherExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Any]
   )(using quotes: Quotes): Expr[Unit] = {
     import quotes.reflect.*
 

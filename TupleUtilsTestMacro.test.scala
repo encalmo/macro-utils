@@ -1,6 +1,5 @@
 package org.encalmo.utils
 
-
 import TupleUtils.*
 import scala.quoted.*
 
@@ -29,7 +28,7 @@ object TupleUtilsTestMacro {
       functionWhenTupleExpr = { [A: Type] => Quotes ?=> (name, value, index) =>
         val typeName = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
         val expr = '{
-          "tuple element at " + ${ index } + ": " + ${ Expr(typeName) } + " = " + ${
+          "tuple element at " + ${ Expr(index) } + ": " + ${ Expr(typeName) } + " = " + ${
             value
           }.toString
         }

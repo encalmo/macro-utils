@@ -1,5 +1,3 @@
-
-
 package org.encalmo.utils
 
 import scala.quoted.*
@@ -26,10 +24,7 @@ object UnionUtils {
   def visit[In: Type](
       label: Expr[String],
       valueExpr: Expr[In],
-      functionExpr: [A: Type] => Quotes ?=> (
-          Expr[String],
-          Expr[A]
-      ) => Expr[Any]
+      functionExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Any]
   )(using quotes: Quotes): Expr[Unit] = {
     import quotes.reflect.*
 

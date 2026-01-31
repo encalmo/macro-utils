@@ -18,7 +18,7 @@ object MethodUtilsTestMacro {
           selectorExpr.valueOrAbort,
           selectorExpr,
           exprExpr,
-          functionExpr = { [A: Type] => Quotes ?=> (name, value) =>
+          functionExpr = { [A: Type] => (name, value) =>
             '{
               result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
                 + " = " + ${ value }

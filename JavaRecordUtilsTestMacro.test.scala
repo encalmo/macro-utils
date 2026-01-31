@@ -1,6 +1,5 @@
 package org.encalmo.utils
 
-
 import JavaRecordUtils.*
 import scala.quoted.*
 
@@ -16,7 +15,7 @@ object JavaRecordUtilsTestMacro {
     visit[A](
       Expr("java record"),
       valueExpr,
-      functionExpr = { [A: Type] => Quotes ?=> (name, value) =>
+      functionExpr = { [A: Type] => (name, value) =>
         val expr = '{
           ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " = " + ${
             value

@@ -1,5 +1,3 @@
-
-
 package org.encalmo.utils
 
 import scala.quoted.*
@@ -36,12 +34,12 @@ object TupleUtils {
       functionWhenTupleExpr: [A: Type] => Quotes ?=> (
           Option[Expr[String]],
           Expr[A],
-          Expr[Int]
+          Int
       ) => Expr[Any],
       functionWhenNamedTupleExpr: [A: Type] => Quotes ?=> (
           Option[Expr[String]],
           Expr[A],
-          Expr[Int]
+          Int
       ) => Expr[Any],
       onStart: Expr[Unit],
       onEnd: Expr[Unit]
@@ -52,7 +50,7 @@ object TupleUtils {
       case '[head *: tail] =>
         '{
           ${ onStart }
-          ${ visitTuple[In, head, tail](label, valueExpr, functionWhenTupleExpr, Expr(0)) }
+          ${ visitTuple[In, head, tail](label, valueExpr, functionWhenTupleExpr, 0) }
           ${ onEnd }
         }
 
@@ -72,7 +70,7 @@ object TupleUtils {
                           functionWhenNamedTupleExpr.apply[value](
                             Some(Expr(TypeNameUtils.shortBaseName(name.show(using Printer.TypeReprShortCode)))),
                             '{ $valueExpr.asInstanceOf[Product].productElement(${ Expr(index) }).asInstanceOf[value] },
-                            Expr(index)
+                            index
                           )
                       }
                     },
@@ -109,16 +107,16 @@ object TupleUtils {
       functionExpr: [A: Type] => Quotes ?=> (
           Option[Expr[String]],
           Expr[A],
-          Expr[Int]
+          Int
       ) => Expr[Any],
-      n: Expr[Int] = Expr(0)
+      n: Int
   ): Expr[Unit] = {
     import quotes.reflect.*
     '{
       ${
         functionExpr.apply[head](
           label,
-          '{ $valueExpr.asInstanceOf[Product].productElement(${ n }).asInstanceOf[head] },
+          '{ $valueExpr.asInstanceOf[Product].productElement(${ Expr(n) }).asInstanceOf[head] },
           n
         )
       }
@@ -130,7 +128,7 @@ object TupleUtils {
               label = label,
               valueExpr = valueExpr,
               functionExpr = functionExpr,
-              n = '{ ${ n } + 1 }
+              n = n + 1
             )
 
           case '[scala.EmptyTuple] =>

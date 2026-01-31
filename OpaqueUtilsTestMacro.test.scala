@@ -1,6 +1,5 @@
 package org.encalmo.utils
 
-
 import OpaqueTypeUtils.*
 import scala.quoted.*
 
@@ -16,14 +15,14 @@ object OpaqueUtilsTestMacro {
     visit[A](
       Expr("opaque"),
       valueExpr,
-      functionWhenOpaqueTypeExpr = { [A: Type] => Quotes ?=> (name, value) =>
+      functionWhenOpaqueTypeExpr = { [A: Type] => (name, value) =>
         val expr = '{
           "opaque type with an upper bound of " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
         }
         buffer += expr
         '{}
       },
-      functionWhenOtherExpr = { [A: Type] => Quotes ?=> (name, value) =>
+      functionWhenOtherExpr = { [A: Type] => (name, value) =>
         val expr = '{
           "not an opaque type " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
         }

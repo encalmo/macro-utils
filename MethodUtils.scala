@@ -37,7 +37,7 @@ object MethodUtils {
       selector: String,
       label: Expr[String],
       expr: Expr[T],
-      functionExpr: [A: Type] => Quotes ?=> (Expr[String], Expr[A]) => Expr[Unit],
+      functionExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Unit],
       fallbackExpr: => Expr[Unit]
   )(using quotes: Quotes): Expr[Unit] = {
     import quotes.reflect.*
