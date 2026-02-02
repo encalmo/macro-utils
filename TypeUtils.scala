@@ -15,7 +15,7 @@ object TypeUtils {
     val tpe = TypeRepr.of[A].dealias
     tpe match {
       case _: OrType => Right(tpe) // already a union type
-      case _ =>
+      case _         =>
         val sym = tpe.typeSymbol
         (if (sym.flags.is(Flags.Opaque))
          then {
@@ -226,6 +226,26 @@ object TypeUtils {
   def isJavaRecordImpl[A: Type](using Quotes): Expr[Boolean] = {
     import quotes.reflect.*
     Expr(TypeRepr.of[A].dealias <:< TypeRepr.typeConstructorOf(classOf[java.lang.Record]))
+  }
+
+  def tupleTypeToNameList[T: Type](using Quotes): List[String] = {
+    import quotes.reflect.*
+    val consType = TypeRepr.of[*:].typeSymbol
+    def extract(t: TypeRepr): List[String] = t.dealias match {
+      case AppliedType(base, List(head, tail)) if base.typeSymbol == consType =>
+        val headName = head match {
+          case ConstantType(StringConstant(s)) => s
+          case _ => report.errorAndAbort(s"Expected a String literal, found: ${head.show}")
+        }
+        headName :: extract(tail)
+
+      case t if t =:= TypeRepr.of[EmptyTuple] =>
+        Nil
+
+      case other =>
+        report.errorAndAbort(s"Unexpected type structure: ${other.show}")
+    }
+    extract(TypeRepr.of[T])
   }
 
 }

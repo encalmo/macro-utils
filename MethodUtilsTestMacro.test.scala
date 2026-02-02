@@ -42,7 +42,7 @@ object MethodUtilsTestMacro {
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
     for (i <- 0 until timesExpr.valueOrAbort) {
-      cache.getOrElseCreateMethod(methodNameExpr.valueOrAbort, methodBodyExpr)
+      cache.addMethodCall(methodNameExpr.valueOrAbort, methodBodyExpr)
     }
     cache.getBlockExprOfUnit
   }

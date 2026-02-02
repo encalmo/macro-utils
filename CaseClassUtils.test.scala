@@ -73,6 +73,11 @@ class CaseClassUtilsSpec extends munit.FunSuite {
     printCaseClassFields(Person("Alice", 30))
   }
 
+  test("print case class fields using statements cache") {
+    case class Person(name: String, age: Int)
+    printCaseClassFields2(Person("Alice", 30))
+  }
+
   test("upper case string fields") {
     case class User(name: String, email: String, age: Int)
     val user = User("alice", "alice@example.com", 30)

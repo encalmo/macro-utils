@@ -31,4 +31,33 @@ object JavaIterableUtils {
       case _ => None
     }
   }
+
+  def maybeVisitJavaIterable[T: Type](using
+      cache: StatementsCache
+  )(
+      functionExpr: [A: Type] => StatementsCache ?=> Unit
+  ): Option[Unit] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val javaListSymbol = Symbol.requiredClass("java.lang.Iterable")
+
+    TypeRepr.of[T].dealias match {
+      case AppliedType(base, List(innerType)) if base.typeSymbol == javaListSymbol =>
+        innerType.asType match {
+          case '[t] =>
+            Some(functionExpr.apply[t])
+        }
+
+      case t if t <:< TypeRepr.typeConstructorOf(classOf[java.util.List[?]]) =>
+        t.baseType(javaListSymbol) match {
+          case AppliedType(_, List(innerType)) =>
+            innerType.asType match {
+              case '[t] => Some(functionExpr.apply[t])
+            }
+          case _ => Some(functionExpr.apply[Object])
+        }
+      case _ => None
+    }
+  }
 }

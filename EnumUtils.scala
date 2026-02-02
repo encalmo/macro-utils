@@ -23,7 +23,7 @@ object EnumUtils {
     sym.flags.is(Flags.JavaDefined) && sym.flags.is(Flags.Enum)
   }
 
-  /** Visit an enum and create a pattern match of enum cases.
+  /** Visit an enum and create a pattern match expression of enum cases.
     *
     * @param valueExpr
     * @param functionExpr
@@ -31,7 +31,7 @@ object EnumUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](
+  def transformToMatchExpression[In: Type](
       valueExpr: Expr[In],
       functionWhenCaseValueExpr: [A: Type] => (
           Expr[String],
@@ -118,6 +118,105 @@ object EnumUtils {
 
       Match(valueExpr.asTerm, matchCaseDefs).asExprOf[Unit]
     }
+  }
+
+  /** Visit an enum, create a pattern match stattement of enum cases.
+    *
+    * @param valueExpr
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def transformToMatchTerm[In: Type](using
+      cache: StatementsCache
+  )(
+      valueTerm: cache.quotes.reflect.Term,
+      functionWhenCaseValueExpr: [A: Type] => (
+          String,
+          cache.quotes.reflect.Term,
+          Set[AnnotationInfo]
+      ) => cache.quotes.reflect.Term,
+      functionWhenCaseClassExpr: [A: Type] => (
+          String,
+          cache.quotes.reflect.Term,
+          Set[AnnotationInfo]
+      ) => cache.quotes.reflect.Term
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val enumType = TypeRepr.of[In].dealias
+    val enumSymbol = enumType.typeSymbol
+    val enumCompanion = enumSymbol.companionModule
+
+    def enumCases: List[Symbol] = {
+      if enumSymbol.flags.is(Flags.JavaDefined)
+        && enumSymbol.flags.is(Flags.Enum)
+      then
+        enumSymbol.companionModule.moduleClass.declarations
+          .filter { member => member.flags.is(Flags.Enum) }
+      else if enumSymbol.flags.is(Flags.Sealed)
+        && (enumSymbol.flags.is(Flags.Enum) || enumSymbol.flags.is(Flags.Trait))
+      then enumSymbol.children
+      else Nil
+    }
+
+    if !enumCases.isEmpty
+    then {
+
+      val matchCaseDefs = enumCases
+        .map { enumCase =>
+          val isEnumCaseValue = enumCompanion.declaredField(enumCase.name).exists
+          val isEnumCaseType = enumCompanion.declaredType(enumCase.name).nonEmpty
+          val isJavaEnumCase = enumCase.flags.is(Flags.JavaDefined) && enumCase.flags.is(Flags.Enum)
+
+          val enumCaseSymbol =
+            if isEnumCaseType
+            then enumCompanion.declaredType(enumCase.name).headOption.get
+            else if isEnumCaseValue
+            then enumCompanion.declaredField(enumCase.name)
+            else enumCase
+
+          val tpe =
+            if isEnumCaseType
+            then TypeSelect(Ref(enumCompanion), enumCase.name).tpe
+            else if isEnumCaseValue
+            then Select(Ref(enumCompanion), enumCase).tpe
+            else enumCase.typeRef
+
+          val matchCasePattern =
+            if isEnumCaseType
+            then Typed(Wildcard(), TypeSelect(Ref(enumCompanion), enumCase.name))
+            else if enumCompanion.declaredField(enumCase.name).exists
+            then Ref(enumCase)
+            else if isJavaEnumCase
+            then Ref(enumCase)
+            else Typed(Wildcard(), TypeTree.of(using enumCase.typeRef.asType))
+
+          val matchCaseBody =
+            tpe.asType match {
+              case '[t] =>
+                if (enumCase.isTerm)
+                then
+                  functionWhenCaseValueExpr.apply[t](
+                    enumCase.name,
+                    valueTerm,
+                    enumCaseSymbol.annotations.computeInfo
+                  )
+                else
+                  functionWhenCaseClassExpr.apply[t](
+                    enumCase.name,
+                    valueTerm,
+                    enumCaseSymbol.annotations.computeInfo
+                  )
+            }
+
+          CaseDef(matchCasePattern, None, matchCaseBody)
+        }
+
+      Match(valueTerm, matchCaseDefs)
+    } else report.errorAndAbort(s"The type ${TypeRepr.of[In].show} is not an enum or sealed ADT")
   }
 
 }

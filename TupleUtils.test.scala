@@ -7,7 +7,36 @@ class TupleUtilsSpec extends munit.FunSuite {
   val tuple = (1, "two", List(1d, 2d))
   val namedTuple = (name = "John", age = 30, email = List("john.doe@example.com", "jane.doe@example.com"))
 
-  test("visit ordinary tuple") {
+  test("Collect ordinary tuple") {
+    assertEquals(
+      testCollectMethod(tuple),
+      List(
+        "tuple element at 0: Int = 1",
+        "tuple element at 1: String = two",
+        "tuple element at 2: List[Double] = List(1.0, 2.0)"
+      )
+    )
+  }
+
+  test("Collect named tuple") {
+    assertEquals(
+      testCollectMethod(namedTuple),
+      List(
+        "named tuple element name: String = John",
+        "named tuple element age: Int = 30",
+        "named tuple element email: List[String] = List(john.doe@example.com, jane.doe@example.com)"
+      )
+    )
+  }
+
+  test("Collect not a tuple") {
+    assertEquals(
+      testCollectMethod("not a tuple"),
+      Nil
+    )
+  }
+
+  test("Visit ordinary tuple") {
     assertEquals(
       testVisitMethod(tuple),
       List(
@@ -18,7 +47,7 @@ class TupleUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit named tuple") {
+  test("Visit named tuple") {
     assertEquals(
       testVisitMethod(namedTuple),
       List(
@@ -26,13 +55,6 @@ class TupleUtilsSpec extends munit.FunSuite {
         "named tuple element age: Int = 30",
         "named tuple element email: List[String] = List(john.doe@example.com, jane.doe@example.com)"
       )
-    )
-  }
-
-  test("visit not a tuple") {
-    assertEquals(
-      testVisitMethod("not a tuple"),
-      Nil
     )
   }
 

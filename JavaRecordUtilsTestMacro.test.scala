@@ -1,18 +1,19 @@
 package org.encalmo.utils
 
 import JavaRecordUtils.*
+import QuotesUtils.*
 import scala.quoted.*
 
 object JavaRecordUtilsTestMacro {
 
-  inline def testVisitMethod[A](value: A): List[String] = {
-    ${ testVisitMethodImpl[A]('{ value }) }
+  inline def testCollectMethod[A](value: A): List[String] = {
+    ${ testCollectMethodImpl[A]('{ value }) }
   }
 
-  def testVisitMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
+  def testCollectMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
     import quotes.reflect.*
     val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
-    visit[A](
+    collect[A](
       Expr("java record"),
       valueExpr,
       functionExpr = { [A: Type] => (name, value) =>
@@ -28,4 +29,42 @@ object JavaRecordUtilsTestMacro {
     Expr.ofList(buffer.toList)
   }
 
+  inline def testVisitMethod[A](value: A): String = {
+    ${ testVisitMethodImpl[A]('{ value }) }
+  }
+
+  def testVisitMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitMethod2Impl[A](valueExpr)
+  }
+
+  def testVisitMethod2Impl[A: Type](valueExpr: Expr[A])(using cache: StatementsCache): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getOrElseCreateValueRef("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    visit[A](
+      "java record",
+      valueExpr.asTerm,
+      functionExpr = { [A: Type] => (name, value) =>
+        cache.addStatement {
+          val messageTerm = StringUtils.concat(
+            Literal(StringConstant(name)),
+            Literal(StringConstant(": ")),
+            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
+            Literal(StringConstant(" = ")),
+            StringUtils.applyToString(value)
+          )
+          MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+        }
+      }
+    )
+    cache.getBlockExprOf(
+      bufferRef
+        .callMethod("toList", Nil)
+        .callMethod("mkString", List(Literal(StringConstant(", "))))
+        .asExprOf[String]
+    )
+  }
 }

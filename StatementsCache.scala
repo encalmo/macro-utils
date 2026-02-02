@@ -11,7 +11,7 @@ class StatementsCache(implicit val quotes: Quotes) {
   private val statements: collection.mutable.ListBuffer[Statement] =
     collection.mutable.ListBuffer.empty
 
-  def getOrElseCreateMethod(methodName: String, methodBody: Expr[Unit]): Unit = {
+  def addMethodCall(methodName: String, methodBody: Expr[Unit]): Unit = {
     index.get(methodName) match {
       case Some(methodCall) =>
         statements.append(methodCall)
@@ -41,6 +41,32 @@ class StatementsCache(implicit val quotes: Quotes) {
     }
   }
 
+  def getOrElseCreateValueRef[T: Type](valueName: String, valueBody: Expr[T]): quotes.reflect.Ref = {
+    index.get(valueName) match {
+      case Some(valueRef) =>
+        valueRef.asInstanceOf[quotes.reflect.Ref]
+
+      case None => {
+
+        val valueSymbol: Symbol =
+          Symbol.newVal(
+            Symbol.spliceOwner,
+            valueName,
+            TypeRepr.of[T],
+            Flags.Private,
+            Symbol.noSymbol
+          )
+
+        val valueDef = ValDef(valueSymbol, Some(valueBody.asTerm))
+        val valueRef = Ref(valueSymbol)
+
+        index.put(valueName, valueRef)
+        statements.append(valueDef)
+        valueRef
+      }
+    }
+  }
+
   def addStatement(statement: Statement): Unit = {
     statements.append(statement)
   }
@@ -57,8 +83,22 @@ class StatementsCache(implicit val quotes: Quotes) {
     Block(statements.toList, '{}.asTerm).asExprOf[Unit]
   }
 
-  def getBlockExprOf[T: Type](valueExpr: Expr[T]): Expr[T] = {
-    Block(statements.toList, valueExpr.asTerm).asExprOf[T]
+  def getBlockExprOf[T: Type]: Expr[T] = {
+    if statements.isEmpty
+    then report.errorAndAbort("No statements to get block expression of")
+    else if statements.size == 1
+    then statements.head.asExprOf[T]
+    else
+      statements.last match {
+        case term: Term =>
+          Block(statements.init.toList, term).asExprOf[T]
+        case _ =>
+          report.errorAndAbort("Last statement is not a term")
+      }
+  }
+
+  def getBlockExprOf[T: Type](lastStatementExpr: Expr[T]): Expr[T] = {
+    Block(statements.toList, lastStatementExpr.asTerm).asExprOf[T]
   }
 
 }

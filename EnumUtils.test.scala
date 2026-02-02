@@ -14,9 +14,28 @@ class EnumUtilsSpec extends munit.FunSuite {
   val entity3: Planes = Boeing("747")
   val entity4: Planes = Airbus("A380")
 
-  test("visit enum's cases 1") {
+  test("transform enum's cases") {
     assertEquals(
-      testVisitMethod(entity1),
+      testTransformToTermMethod(entity1),
+      "case _: Dog => Dog(Rex)"
+    )
+    assertEquals(
+      testTransformToTermMethod(entity2),
+      "case Cow => Cow"
+    )
+    assertEquals(
+      testTransformToTermMethod(entity3),
+      "case _: Boeing => Boeing(747)"
+    )
+    assertEquals(
+      testTransformToTermMethod(entity4),
+      "case _: Airbus => Airbus(A380)"
+    )
+  }
+
+  test("collect enum's cases 1") {
+    assertEquals(
+      testTransformToExprMethod(entity1),
       List(
         "case _: Dog =>",
         "case Cow =>"
@@ -24,9 +43,9 @@ class EnumUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit enum's cases 2") {
+  test("collect enum's cases 2") {
     assertEquals(
-      testVisitMethod(entity2),
+      testTransformToExprMethod(entity2),
       List(
         "case _: Dog =>",
         "case Cow =>"
@@ -34,9 +53,9 @@ class EnumUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit enum's cases 3") {
+  test("collect enum's cases 3") {
     assertEquals(
-      testVisitMethod(entity3),
+      testTransformToExprMethod(entity3),
       List(
         "case _: Boeing =>",
         "case _: Airbus =>"
@@ -44,9 +63,9 @@ class EnumUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit enum's cases 4") {
+  test("collect enum's cases 4") {
     assertEquals(
-      testVisitMethod(entity4),
+      testTransformToExprMethod(entity4),
       List(
         "case _: Boeing =>",
         "case _: Airbus =>"
@@ -54,9 +73,9 @@ class EnumUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit not an enum or sealed ADT") {
+  test("collect not an enum or sealed ADT") {
     assertEquals(
-      testVisitMethod("not an enum or sealed ADT"),
+      testTransformToExprMethod("not an enum or sealed ADT"),
       Nil
     )
   }

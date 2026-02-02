@@ -10,14 +10,14 @@ object UnionUtilsTestMacro {
     Expr(UnionUtils.isUnion[A])
   }
 
-  inline def testVisitMethod[A](value: A): List[String] = {
-    ${ testVisitMethodImpl[A]('{ value }) }
+  inline def testTransformToMatchExpressionMethod[A](value: A): List[String] = {
+    ${ testTransformToMatchExpressionMethodImpl[A]('{ value }) }
   }
 
-  def testVisitMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
+  def testTransformToMatchExpressionMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
     import quotes.reflect.*
     val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
-    visit[A](
+    transformToMatchExpression[A](
       Expr("union"),
       valueExpr,
       { [A: Type] => (name, value) =>
@@ -29,5 +29,36 @@ object UnionUtilsTestMacro {
       }
     )
     Expr.ofList(buffer.toList)
+  }
+
+  inline def testTransformToMatchTermMethod[A](value: A): String = {
+    ${ testTransformToMatchTermMethodImpl[A]('{ value }) }
+  }
+
+  def testTransformToMatchTermMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    testTransformToMatchTermMethod2Impl[A](valueExpr)
+  }
+
+  def testTransformToMatchTermMethod2Impl[A: Type](
+      valueExpr: Expr[A]
+  )(using cache: StatementsCache): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    cache.addStatement {
+      transformToMatchTerm[A](
+        "union",
+        valueExpr.asTerm,
+        functionExpr = { [A: Type] => (name, value) =>
+          StringUtils.concat(
+            Literal(StringConstant("case _: ")),
+            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
+            Literal(StringConstant(" => ")),
+            value
+          )
+        }
+      )
+    }
+    cache.getBlockExprOf[String]
   }
 }

@@ -92,4 +92,100 @@ object MethodUtils {
     }
   }
 
+  /** Dynamically calls a method on 'target' with the given name and arguments.
+    */
+  def callMethod(using
+      Quotes
+  )(
+      targetTerm: quotes.reflect.Term,
+      methodName: String,
+      argTerms: List[quotes.reflect.Term]
+  ): quotes.reflect.Term = {
+    val tpe = targetTerm.tpe.dealias.widen
+    val methodSym = findMethodByArity(tpe, methodName, argTerms.size)
+    buildMethodCall(targetTerm, methodSym, argTerms)
+  }
+
+  def findMethodByArity(using
+      Quotes
+  )(
+      tpe: quotes.reflect.TypeRepr,
+      name: String,
+      arity: Int
+  ): quotes.reflect.Symbol = {
+    import quotes.reflect.*
+
+    val clsSym = tpe.typeSymbol
+    val candidates = clsSym.methodMember(name)
+
+    // Filter by argument count (ignoring type parameters like [T])
+    val matched = candidates.find { sym =>
+      val valueParamLists = sym.paramSymss.filterNot { clause =>
+        clause.headOption.exists(_.isType)
+      }
+      // Sum up arguments across all curried lists: (a: Int)(b: Int) = 2 args
+      val totalArgs = valueParamLists.flatten.size
+      totalArgs == arity
+    }
+
+    matched.getOrElse {
+      report.errorAndAbort(s"Method '$name' with $arity arguments not found in ${tpe.show}")
+    }
+  }
+
+  def buildMethodCall(using
+      Quotes
+  )(
+      target: quotes.reflect.Term,
+      methodSym: quotes.reflect.Symbol,
+      allArgs: List[quotes.reflect.Term]
+  ): quotes.reflect.Term = {
+    import quotes.reflect.*
+
+    // Start with the selection: target.method
+    var fun: Term = Select(target, methodSym)
+    var argsRemaining = allArgs
+
+    // Iterate over parameter lists (handle [T], (x), (y))
+    methodSym.paramSymss.foreach { clause =>
+      if (clause.headOption.exists(_.isType)) {
+        // LAYER 1: Generics (PolyType) -> TypeApply
+        // We inject [Any] for generic parameters to satisfy the Type System
+        val typeArgs = clause.map(_ => Inferred(TypeRepr.of[Any]))
+        fun = TypeApply(fun, typeArgs)
+      } else if (clause.headOption.exists(_.isTerm) || clause.isEmpty) {
+        // LAYER 2: Values (MethodType) -> Apply
+        // Consume the exact number of args this list expects
+        val argCount = clause.length
+        val (argsForThisClause, rest) = argsRemaining.splitAt(argCount)
+        argsRemaining = rest
+
+        fun = Apply(fun, argsForThisClause)
+      }
+    }
+
+    fun
+  }
+
+  def callPrintln(using
+      Quotes
+  )(term: quotes.reflect.Term, terms: quotes.reflect.Term*): quotes.reflect.Term = {
+    import quotes.reflect.*
+    val predefTerm = Ref(defn.PredefModule)
+    val printlnSym = defn.PredefModule
+      .methodMember("println")
+      .find { sym =>
+        sym.paramSymss match {
+          case List(List(_)) => true
+          case _             => false
+        }
+      }
+      .getOrElse(report.errorAndAbort("Could not find println(Any)"))
+
+    Apply(
+      Select(predefTerm, printlnSym),
+      List(StringUtils.concat(term, terms*))
+    )
+  }
+
 }

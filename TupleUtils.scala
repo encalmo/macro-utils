@@ -1,6 +1,7 @@
 package org.encalmo.utils
 
 import scala.quoted.*
+import QuotesUtils.*
 
 object TupleUtils {
 
@@ -18,7 +19,7 @@ object TupleUtils {
       case _                           => false
     }
 
-  /** Visit a named tuple.
+  /** Visit a named tuple and collect the results into a block of unit.
     *
     * @param valueExpr
     * @param functionExpr
@@ -26,7 +27,7 @@ object TupleUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](using
+  def collect[In: Type](using
       quotes: Quotes
   )(
       label: Option[Expr[String]],
@@ -50,7 +51,7 @@ object TupleUtils {
       case '[head *: tail] =>
         '{
           ${ onStart }
-          ${ visitTuple[In, head, tail](label, valueExpr, functionWhenTupleExpr, 0) }
+          ${ collectTuple[In, head, tail](label, valueExpr, functionWhenTupleExpr, 0) }
           ${ onEnd }
         }
 
@@ -99,7 +100,7 @@ object TupleUtils {
     }
   }
 
-  private def visitTuple[In: Type, head: Type, tail <: Tuple: Type](using
+  private def collectTuple[In: Type, head: Type, tail <: Tuple: Type](using
       quotes: Quotes
   )(
       label: Option[Expr[String]],
@@ -124,7 +125,7 @@ object TupleUtils {
       ${
         Type.of[tail] match {
           case '[head2 *: tail2] =>
-            visitTuple[In, head2, tail2](
+            collectTuple[In, head2, tail2](
               label = label,
               valueExpr = valueExpr,
               functionExpr = functionExpr,
@@ -138,4 +139,113 @@ object TupleUtils {
 
     }
   }
+
+  /** Visit a named tuple using a statements cache.
+    *
+    * @param valueExpr
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visit[In: Type](using
+      cache: StatementsCache
+  )(
+      label: Option[String],
+      valueTerm: cache.quotes.reflect.Term,
+      functionWhenTupleExpr: [A: Type] => (
+          Option[String],
+          cache.quotes.reflect.Term,
+          Int
+      ) => Unit,
+      functionWhenNamedTupleExpr: [A: Type] => (
+          Option[String],
+          cache.quotes.reflect.Term,
+          Int
+      ) => Unit,
+      onStart: cache.quotes.reflect.Term,
+      onEnd: cache.quotes.reflect.Term
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    Type.of[In] match {
+      case '[head *: tail] =>
+        cache.addStatement(onStart)
+        visitTuple[In, head, tail](label, valueTerm, functionWhenTupleExpr, 0)
+        cache.addStatement(onEnd)
+
+      case '[NamedTuple.AnyNamedTuple] =>
+        cache.addStatement(onStart)
+        val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
+        TypeRepr.of[In].dealias match {
+          case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
+            nameTypeList
+              .zip(valueTypeList)
+              .zipWithIndex
+              .foreach { case ((name, valueType), index) =>
+                valueType.asType match {
+                  case '[value] =>
+                    functionWhenNamedTupleExpr.apply[value](
+                      Some(TypeNameUtils.shortBaseName(name.show(using Printer.TypeReprShortCode))),
+                      Apply(
+                        Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
+                        List(Literal(IntConstant(index)))
+                      ),
+                      index
+                    )
+                }
+              }
+          case _ => ()
+        }
+        cache.addStatement(onEnd)
+
+      case '[scala.EmptyTuple] =>
+        cache.addStatement(onStart)
+        cache.addStatement(onEnd)
+
+      case '[scala.NonEmptyTuple] =>
+        cache.addStatement(onStart)
+        cache.addStatement(onEnd)
+
+      case _ =>
+        ()
+    }
+  }
+
+  private def visitTuple[In: Type, head: Type, tail <: Tuple: Type](using
+      cache: StatementsCache
+  )(
+      label: Option[String],
+      valueTerm: cache.quotes.reflect.Term,
+      functionExpr: [A: Type] => (
+          Option[String],
+          cache.quotes.reflect.Term,
+          Int
+      ) => Unit,
+      n: Int
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    functionExpr.apply[head](
+      label,
+      valueTerm.callMethod("productElement", List(Literal(IntConstant(n)))),
+      n
+    )
+
+    Type.of[tail] match {
+      case '[head2 *: tail2] =>
+        visitTuple[In, head2, tail2](
+          label = label,
+          valueTerm = valueTerm,
+          functionExpr = functionExpr,
+          n = n + 1
+        )
+
+      case '[scala.EmptyTuple] =>
+        ()
+    }
+  }
+
 }

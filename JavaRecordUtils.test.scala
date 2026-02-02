@@ -11,9 +11,9 @@ class JavaRecordUtilsSpec extends munit.FunSuite {
     java.math.BigDecimal(1000)
   )
 
-  test("visit record") {
+  test("collect record") {
     assertEquals(
-      testVisitMethod(entity),
+      testCollectMethod(entity),
       List(
         "id: String = 1234567890",
         "customerId: String = John Doe",
@@ -23,11 +23,17 @@ class JavaRecordUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit not a record") {
+  test("collect not a record") {
     assertEquals(
-      testVisitMethod("not a record"),
+      testCollectMethod("not a record"),
       Nil
     )
   }
 
+  test("visit record") {
+    assertEquals(
+      testVisitMethod(entity),
+      "id: String = 1234567890, customerId: String = John Doe, items: List[Integer] = [100, 200, 300], total: BigDecimal = 1000"
+    )
+  }
 }

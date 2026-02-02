@@ -10,9 +10,9 @@ class UnionUtilsSpec extends munit.FunSuite {
   val entity2: Entity = 1
   val entity3: Entity = true
 
-  test("visit union's cases 1") {
+  test("transformToMatchExpression union's cases 1") {
     assertEquals(
-      testVisitMethod(entity1),
+      testTransformToMatchExpressionMethod(entity1),
       List(
         "case _: String =>",
         "case _: Int =>",
@@ -21,9 +21,9 @@ class UnionUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit union's cases 2") {
+  test("transformToMatchExpression union's cases 2") {
     assertEquals(
-      testVisitMethod(entity2),
+      testTransformToMatchExpressionMethod(entity2),
       List(
         "case _: String =>",
         "case _: Int =>",
@@ -32,9 +32,9 @@ class UnionUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit union's cases 3") {
+  test("transformToMatchExpression union's cases 3") {
     assertEquals(
-      testVisitMethod(entity3),
+      testTransformToMatchExpressionMethod(entity3),
       List(
         "case _: String =>",
         "case _: Int =>",
@@ -43,9 +43,9 @@ class UnionUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("visit non-union type") {
+  test("transformToMatchExpression non-union type") {
     assertEquals(
-      testVisitMethod("not a union type"),
+      testTransformToMatchExpressionMethod("not a union type"),
       Nil
     )
   }
@@ -67,6 +67,24 @@ class UnionUtilsSpec extends munit.FunSuite {
     assertEquals(testIsUnion[Char], false)
     assertEquals(testIsUnion[(String, Int)], false)
     assertEquals(testIsUnion[EmptyTuple], false)
+  }
+
+  test("transformToMatchTerm union's cases 1") {
+    assertEquals(
+      testTransformToMatchTermMethod(entity1),
+      "case _: String => Rex"
+    )
+    assertEquals(
+      testTransformToMatchTermMethod(entity2),
+      "case _: Int => 1"
+    )
+    assertEquals(
+      testTransformToMatchTermMethod(entity3),
+      "case _: Boolean => true"
+    )
+    intercept[Exception](
+      testTransformToMatchTermMethod("not a union type")
+    )
   }
 
 }

@@ -202,7 +202,7 @@ object CaseClassUtils {
     }
   }
 
-  /** Visit a case class and apply a function to each field.
+  /** Visit a case class and apply a function to each field, then collect the results into a block of unit.
     *
     * @param valueExpr
     * @param functionExpr
@@ -210,7 +210,7 @@ object CaseClassUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](
+  def collect[In: Type](
       valueExpr: Expr[In],
       functionExpr: [A: Type] => (
           Expr[String],
@@ -243,6 +243,49 @@ object CaseClassUtils {
       },
       '{}
     )
+  }
+
+  /** Visit a case class and apply a function to each field using a statements cache.
+    *
+    * @param valueExpr
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visit[In: Type](using
+      cache: StatementsCache
+  )(
+      valueTerm: cache.quotes.reflect.Term,
+      functionExpr: [A: Type] => (
+          String, // name
+          cache.quotes.reflect.Term, // value
+          Set[AnnotationInfo] // annotations
+      ) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    {
+      val parentTpe = TypeUtils.underlyingTypeRepr[In] match {
+        case Left(tpe)  => tpe
+        case Right(tpe) => tpe
+      }
+      parentTpe.asType match {
+        case '[p] =>
+          parentTpe.typeSymbol.caseFields
+            .map { caseField =>
+              val tpe = parentTpe.memberType(caseField).dealias
+              tpe.asType match {
+                case '[t] =>
+                  functionExpr.apply[t](
+                    caseField.name,
+                    Select(valueTerm, caseField),
+                    AnnotationUtils.computeFieldAnnotations[p](caseField.name)
+                  )
+              }
+            }
+      }
+    }
   }
 
   /** Create an instance of a case class using its primary constructor.

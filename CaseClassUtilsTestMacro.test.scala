@@ -1,6 +1,7 @@
 package org.encalmo.utils
 
 import CaseClassUtils.*
+import QuotesUtils.*
 import scala.quoted.*
 import org.encalmo.utils.AnnotationUtils.AnnotationInfo
 
@@ -15,22 +16,37 @@ object CaseClassUtilsTestMacro {
     ${ testVisitMethodImpl[A]('{ value }) }
   }
 
-  def testVisitMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
-    import quotes.reflect.*
-    val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
+  def testVisitMethodImpl[A: Type](valueExpr: Expr[A])(using outer: Quotes): Expr[List[String]] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitMethodImpl2[A](valueExpr)
+  }
+
+  def testVisitMethodImpl2(using cache: StatementsCache)[A: Type](valueExpr: Expr[A]): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getOrElseCreateValueRef("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
     visit[A](
-      valueExpr,
+      valueExpr.asTerm,
       { [A: Type] => (name, value, annotations) =>
-        val expr = '{
-          ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " = " + ${
-            value
-          }.toString
+        cache.addStatement {
+          val messageTerm =
+            StringUtils.concat(
+              Literal(StringConstant(name)),
+              Literal(StringConstant(": ")),
+              Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
+              Literal(StringConstant(" = ")),
+              StringUtils.applyToString(value)
+            )
+          MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
         }
-        buffer += expr
-        '{}
       }
     )
-    Expr.ofList(buffer.toList)
+
+    cache.getBlockExprOf(
+      bufferRef.callMethod("toList", Nil).asExprOf[List[String]]
+    )
   }
 
   inline def testTransformMethod[A](value: A): List[String] = {
@@ -56,12 +72,38 @@ object CaseClassUtilsTestMacro {
   inline def printCaseClassFields[T](inline value: T): Unit = ${ printCaseClassFieldsImpl('value) }
 
   def printCaseClassFieldsImpl[T: Type](value: Expr[T])(using Quotes): Expr[Unit] = {
-    CaseClassUtils.visit[T](
+    CaseClassUtils.collect[T](
       value,
       [A: Type] =>
         (nameExpr: Expr[String], valueExpr: Expr[A], annotations: Set[AnnotationInfo]) =>
           '{ println(${ nameExpr } + ": " + ${ valueExpr }.toString) }
     )
+  }
+
+  inline def printCaseClassFields2[T](inline value: T): Unit = ${ printCaseClassFields2Impl('value) }
+
+  def printCaseClassFields2Impl[T: Type](value: Expr[T])(using Quotes): Expr[Unit] = {
+    given StatementsCache = new StatementsCache
+    printCaseClassFields21Impl[T](value)
+  }
+
+  def printCaseClassFields21Impl[T: Type](valueExpr: Expr[T])(using cache: StatementsCache): Expr[Unit] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    CaseClassUtils.visit[T](using cache)(
+      valueExpr.asTerm,
+      [A: Type] =>
+        (name, value, annotations) =>
+          val term =
+            MethodUtils.callPrintln(using cache.quotes)(
+              Literal(StringConstant(name)),
+              Literal(StringConstant(": ")),
+              StringUtils.applyToString(value)
+            )
+          cache.addStatement(term)
+    )
+    cache.getBlockExprOfUnit
   }
 
   inline def upperCaseStringFields[T, R <: Product](inline value: T): R =

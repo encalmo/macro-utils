@@ -2,7 +2,7 @@
 
 # macro-utils
 
-Macro-utils is a Scala 3 library providing some helpers for building macros. Uses visitor and transform patterns to explore types.
+`macro-utils` is a Scala 3 library providing helpers for building macros. Leverages visitor pattern to traverse data structures of different types. All major methods have a variant using `StatementsCache` abstraction to avoid nested splicing conflicts and cache/reuse produced methods.
 
 ### Provided Utility Objects
 
@@ -43,9 +43,60 @@ or with SCALA-CLI
 
 ## Examples
 
-### Example: Using `CaseClassUtils.visit` to Inspect Case Class Fields
+### Example: Using `CaseClassUtils.visit` to Perform an Operation on Case Class Fields
 
-Suppose you want to write a macro that visits all fields of a case class and prints their names and values at compile time. The `CaseClassUtils.visit` method can be used to achieve this in a concise way.
+You can use `CaseClassUtils.visit` when you want to operate on each field of a case class, such as accumulating side effects or constructing values using a cache. The following macro visits each field of a case class and prints its name and value at compile time, leveraging the `StatementsCache` to build block of statements.
+
+```scala
+import org.encalmo.utils.CaseClassUtils
+import org.encalmo.utils.StatementsCache
+import scala.quoted.*
+
+inline def printCaseClassFields[T](inline value: T): Unit = ${ printCaseClassFieldsImpl('value) }
+
+def printCaseClassFieldsImpl[T: Type](value: Expr[T])(using Quotes): Expr[Unit] = {
+  given StatementsCache = new StatementsCache
+  printCaseClassFieldsUsingCache[T](value)
+}
+
+def printCaseClassFieldsUsingCache[T: Type](valueExpr: Expr[T])(using cache: StatementsCache): Expr[Unit] = {
+  given cache.quotes.type = cache.quotes
+  import cache.quotes.reflect.*
+
+  CaseClassUtils.visit[T](using cache)(
+    valueExpr.asTerm,
+    [A: Type] =>
+      (name, value, annotations) =>
+        val term = MethodUtils.callPrintln(using cache.quotes)(
+          Literal(StringConstant(name)),
+          Literal(StringConstant(": ")),
+          StringUtils.applyToString(value)
+        )
+        cache.addStatement(term)
+  )
+  cache.getBlockExprOfUnit
+}
+```
+
+**Usage:**
+
+```scala
+case class Point(x: Int, y: Int)
+printCaseClassFields(Point(10, 20))
+```
+
+Output:
+```
+x: 10
+y: 20
+```
+
+This demonstrates how to walk through a case class with `CaseClassUtils.visit` and perform a custom action for each field, using the macro utilities' cache for correct code generation.
+
+
+### Example: Using `CaseClassUtils.collect` to Inspect Case Class Fields
+
+Suppose you want to write a macro that visits all fields of a case class and prints their names and values at compile time. The `CaseClassUtils.collect` method can be used to achieve this in a concise way.
 
 ```scala
 import org.encalmo.utils.CaseClassUtils
@@ -54,7 +105,7 @@ import scala.quoted.*
 inline def printCaseClassFields[T](inline value: T): Unit = ${ printCaseClassFieldsImpl('value) }
 
   def printCaseClassFieldsImpl[T: Type](value: Expr[T])(using Quotes): Expr[Unit] = {
-    CaseClassUtils.visit[T](
+    CaseClassUtils.collect[T](
       value,
       [A: Type] => (nameExpr, valueExpr, annotations) =>
           '{ println(${ nameExpr } + ": " + ${ valueExpr }.toString) }

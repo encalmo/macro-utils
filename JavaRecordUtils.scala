@@ -10,7 +10,7 @@ object JavaRecordUtils {
     TypeRepr.of[A].dealias <:< recordType
   }
 
-  /** Visit a Java record type.
+  /** Visit a Java record type and collect the results into a block of unit.
     *
     * @param valueExpr
     * @param functionExpr
@@ -18,7 +18,7 @@ object JavaRecordUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](
+  def collect[In: Type](
       label: Expr[String],
       valueExpr: Expr[In],
       functionExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Any]
@@ -65,6 +65,65 @@ object JavaRecordUtils {
         },
         '{}
       )
+    }
+  }
+
+  /** Visit a Java record type and collect the results into a block of unit.
+    *
+    * @param valueExpr
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visit[In: Type](using
+      cache: StatementsCache
+  )(
+      label: String,
+      valueTerm: cache.quotes.reflect.Term,
+      functionExpr: [A: Type] => (String, cache.quotes.reflect.Term) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val tpe = TypeRepr.of[In]
+    val sym = tpe.typeSymbol
+    val recordType = TypeRepr.typeConstructorOf(classOf[java.lang.Record])
+
+    if (!(tpe <:< recordType)) then '{}
+    else {
+      val primaryCtor = sym.primaryConstructor
+      if (primaryCtor.isNoSymbol) {
+        report.errorAndAbort("Could not find Java Record primary constructor")
+      }
+      val components = primaryCtor.paramSymss.headOption.getOrElse(Nil)
+
+      components.foreach { paramSym =>
+        val name = paramSym.name
+        val accessorMethod = sym.methodMember(name).headOption.getOrElse {
+          report.errorAndAbort(s"Could not find accessor method for Java Record component: $name")
+        }
+        val methodType = tpe.memberType(accessorMethod)
+        val returnType: TypeRepr = methodType match {
+          // Standard method: def foo(x: Int): String  => MethodType(..., String)
+          case mt: MethodType => mt.resType
+          // Generic method: def foo[A]: A => PolyType
+          case pt: PolyType =>
+            pt.resType match {
+              case mt: MethodType => mt.resType // Unpack the underlying method
+              case other          => other
+            }
+          // Parameterless method (in some contexts) or ByName
+          case byName: ByNameType => byName.underlying
+          // Fallback (e.g. it was already a value type)
+          case other => other
+        }
+        returnType.asType match {
+          case '[t] =>
+            val valueAccess = Apply(Select(valueTerm, accessorMethod), Nil)
+            functionExpr.apply[t](name, valueAccess)
+        }
+      }
     }
   }
 }
