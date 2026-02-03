@@ -11,7 +11,7 @@ class StatementsCache(implicit val quotes: Quotes) {
   private val statements: collection.mutable.ListBuffer[Statement] =
     collection.mutable.ListBuffer.empty
 
-  def addMethodCall(methodName: String, methodBody: Expr[Unit]): Unit = {
+  def addMethodCall(methodName: String, methodBody: => Expr[Unit]): Unit = {
     index.get(methodName) match {
       case Some(methodCall) =>
         statements.append(methodCall)
@@ -30,6 +30,42 @@ class StatementsCache(implicit val quotes: Quotes) {
         val methodDef = DefDef(
           methodSymbol,
           { _ => Some(methodBody.asTerm.changeOwner(methodSymbol)) }
+        )
+
+        val methodCall = Apply(Ref(methodSymbol), Nil)
+
+        index.put(methodName, methodCall)
+        statements.append(methodDef)
+        statements.append(methodCall)
+      }
+    }
+  }
+
+  def callOrBuildMethodOfUnit(methodName: String, buildMethodBody: StatementsCache ?=> Unit): Unit = {
+    index.get(methodName) match {
+      case Some(methodCall) =>
+        statements.append(methodCall)
+
+      case None => {
+
+        val methodBody: Term = {
+          val nested = new StatementsCache(using quotes)
+          buildMethodBody(using nested)
+          nested.asTerm.asInstanceOf[Term]
+        }
+
+        val methodSymbol: Symbol =
+          Symbol.newMethod(
+            Symbol.spliceOwner,
+            methodName,
+            MethodType(Nil)(_ => Nil, _ => TypeRepr.of[Unit]),
+            Flags.Protected,
+            Symbol.noSymbol
+          )
+
+        val methodDef = DefDef(
+          methodSymbol,
+          { _ => Some(methodBody.changeOwner(methodSymbol)) }
         )
 
         val methodCall = Apply(Ref(methodSymbol), Nil)
@@ -77,6 +113,26 @@ class StatementsCache(implicit val quotes: Quotes) {
 
   def getStatements: List[Statement] = {
     statements.toList
+  }
+
+  def asTerm[T: Type]: Term = {
+    if statements.isEmpty
+    then report.errorAndAbort("No statements to get block expression of")
+    else if statements.size == 1
+    then
+      statements.head match {
+        case term: Term =>
+          term
+        case _ =>
+          report.errorAndAbort("Statement is not a term")
+      }
+    else
+      statements.last match {
+        case term: Term =>
+          Block(statements.init.toList, term)
+        case _ =>
+          report.errorAndAbort("Last statement is not a term")
+      }
   }
 
   def getBlockExprOfUnit: Expr[Unit] = {

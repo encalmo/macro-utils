@@ -31,11 +31,11 @@ object MethodUtilsTestMacro {
     }
   }
 
-  inline def testWrapInMethodCallWithCache(inline times: Int, methodName: String, methodBody: => Unit): Unit = {
-    ${ testWrapInMethodCallWithCacheImpl('{ times }, '{ methodName }, '{ methodBody }) }
+  inline def testAddMethodCallWithCache(inline times: Int, methodName: String, methodBody: => Unit): Unit = {
+    ${ testAddMethodCallWithCacheImpl('{ times }, '{ methodName }, '{ methodBody }) }
   }
 
-  def testWrapInMethodCallWithCacheImpl(
+  def testAddMethodCallWithCacheImpl(
       timesExpr: Expr[Int],
       methodNameExpr: Expr[String],
       methodBodyExpr: Expr[Unit]
@@ -44,6 +44,39 @@ object MethodUtilsTestMacro {
     for (i <- 0 until timesExpr.valueOrAbort) {
       cache.addMethodCall(methodNameExpr.valueOrAbort, methodBodyExpr)
     }
+    cache.getBlockExprOfUnit
+  }
+
+  inline def testCallOrBuildMethodOfUnitWithCache(
+      methodName: String
+  ): Unit = {
+    ${ testCallOrBuildMethodOfUnitWithCacheImpl('{ methodName }) }
+  }
+
+  def testCallOrBuildMethodOfUnitWithCacheImpl(
+      methodNameExpr: Expr[String]
+  )(using Quotes): Expr[Unit] = {
+    val cache = new StatementsCache
+    cache.callOrBuildMethodOfUnit(
+      methodNameExpr.valueOrAbort,
+      { (nested: StatementsCache) ?=>
+        import nested.quotes.reflect.*
+        nested.addStatement {
+          MethodUtils
+            .callPrintln(using nested.quotes)(Literal(StringConstant("Hello World!")))
+        }
+      }
+    )
+    cache.callOrBuildMethodOfUnit(
+      methodNameExpr.valueOrAbort,
+      { (nested: StatementsCache) ?=>
+        import nested.quotes.reflect.*
+        nested.addStatement {
+          MethodUtils
+            .callPrintln(using nested.quotes)(Literal(StringConstant("Hello World!")))
+        }
+      }
+    )
     cache.getBlockExprOfUnit
   }
 }
