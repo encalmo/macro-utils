@@ -4,18 +4,6 @@
 
 `macro-utils` is a Scala 3 library providing helpers for building macros. Leverages visitor pattern to traverse data structures of different types. All major methods have a variant using `StatementsCache` abstraction to avoid nested splicing conflicts and cache/reuse produced methods.
 
-### Provided Utility Objects
-
-- `CaseClassUtils` visit and transfrom case class fields, names and values
-- `EnumUtils` visit enums and sealed ADT hierarchies, and Java's enums, and build case pattern matcher
-- `UnionUtils` visit types of the union
-- `TupleUtils` visit tuple and named tuple elements
-- `OpaqueTypeUtils` unwrap the type is possible
-- `SelectableUtils` maybe visit selectable fields
-- `JavaRecordUtils` visit record fields, names and values
-- `JavaMapUtils` visit Java's Map names and values
-- `JavaIterableUtils` visit Java' iterables
-
 ## Table of contents
 
    - [Provided Utility Objects](#provided-utility-objects)

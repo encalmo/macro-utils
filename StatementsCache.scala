@@ -186,7 +186,7 @@ class StatementsCache(implicit val quotes: Quotes) {
     statements.toList
   }
 
-  def asTerm[T: Type]: Term = {
+  def asTerm: Term = {
     if statements.isEmpty
     then report.errorAndAbort("No statements to get block expression of")
     else if statements.size == 1
