@@ -22,7 +22,8 @@
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Examples](#examples)
-   - [Example: Using `CaseClassUtils.visit` to Inspect Case Class Fields](#example:-using-`caseclassutils.visit`-to-inspect-case-class-fields)
+   - [Example: Using `CaseClassUtils.visit` to Perform an Operation on Case Class Fields](#example:-using-`caseclassutils.visit`-to-perform-an-operation-on-case-class-fields)
+   - [Example: Using `CaseClassUtils.collect` to Inspect Case Class Fields](#example:-using-`caseclassutils.collect`-to-inspect-case-class-fields)
    - [Example: Using `CaseClassUtils.transformToList` to create an instance with all string values upper cased](#example:-using-`caseclassutils.transformtolist`-to-create-an-instance-with-all-string-values-upper-cased)
    - [Example: Using `CaseClassUtils.transformToExprOfTuple` to create a tuple from case class fields](#example:-using-`caseclassutils.transformtoexproftuple`-to-create-a-tuple-from-case-class-fields)
 - [Project content](#project-content)
@@ -35,11 +36,11 @@
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.6"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.7"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.6
+    //> using dep org.encalmo::macro-utils:0.9.7
 
 ## Examples
 
@@ -239,10 +240,14 @@ def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(usin
 ├── OpaqueUtilsTestMacro.test.scala
 ├── Order.java
 ├── project.scala
+├── QuotesUtils.scala
 ├── README.md
 ├── SelectableUtils.scala
+├── SelectableUtils.test.scala
+├── SelectableUtilsTestMacro.test.scala
 ├── StatementsCache.scala
 ├── Status.java
+├── StringUtils.scala
 ├── test.sh
 ├── TestModel.test.scala
 ├── TupleUtils.scala
