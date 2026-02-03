@@ -77,6 +77,15 @@ class StatementsCache(implicit val quotes: Quotes) {
     }
   }
 
+  def getValueRef(valueName: String): quotes.reflect.Ref = {
+    index.get(valueName) match {
+      case Some(valueRef) =>
+        valueRef.asInstanceOf[quotes.reflect.Ref]
+      case None =>
+        report.errorAndAbort(s"Value ref '$valueName' not found in statements cache")
+    }
+  }
+
   def getOrElseCreateValueRef[T: Type](valueName: String, valueBody: Expr[T]): quotes.reflect.Ref = {
     index.get(valueName) match {
       case Some(valueRef) =>
@@ -157,4 +166,14 @@ class StatementsCache(implicit val quotes: Quotes) {
     Block(statements.toList, lastStatementExpr.asTerm).asExprOf[T]
   }
 
+}
+
+object StatementsCache {
+
+  def block(using outer: StatementsCache)(buildBlock: StatementsCache ?=> Unit): outer.quotes.reflect.Term = {
+    val nested = new StatementsCache(using outer.quotes)
+    given nested.quotes.type = nested.quotes
+    buildBlock(using nested)
+    nested.asTerm.asInstanceOf[outer.quotes.reflect.Term]
+  }
 }
