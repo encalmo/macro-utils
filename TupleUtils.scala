@@ -248,4 +248,36 @@ object TupleUtils {
     }
   }
 
+  def createTuple2(using
+      cache: StatementsCache
+  )(
+      key: cache.quotes.reflect.Term,
+      value: cache.quotes.reflect.Term
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    // 1. Resolve Symbols
+    val tupleObjSym = Symbol.requiredModule("scala.Tuple2") // The object Tuple2
+    val applySym = tupleObjSym.methodMember("apply").head // The 'apply' method
+
+    // 2. Prepare Types [K, V]
+    // We need to widen types to avoid over-specific singleton types (e.g. "foo".type)
+    val keyType = key.tpe.widen
+    val valType = value.tpe.widen
+
+    // 3. Construct the Call
+    // AST: Tuple2.apply[KeyType, ValType](key, value)
+
+    // A. Select 'apply'
+    val sel = Select(Ref(tupleObjSym), applySym)
+
+    // B. Apply Type Arguments [K, V]
+    // Since 'apply' is generic: def apply[T1, T2](_1: T1, _2: T2): (T1, T2)
+    val typedFun = TypeApply(sel, List(Inferred(keyType), Inferred(valType)))
+
+    // C. Apply Value Arguments (key, value)
+    Apply(typedFun, List(key, value))
+  }
+
 }

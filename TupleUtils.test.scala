@@ -80,4 +80,8 @@ class TupleUtilsSpec extends munit.FunSuite {
     assertEquals(testIsNamedTuple[Boolean], false)
   }
 
+  test("createTuple") {
+    assertEquals(testCreateTuple[Int, String](1, "two"), (1, "two"))
+  }
+
 }

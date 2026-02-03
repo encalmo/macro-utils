@@ -83,4 +83,39 @@ object IterableUtils {
     Block(List(iteratorValDef), whileTerm)
   }
 
+  /** Create a static list from a list of terms. */
+  def createStaticList[A: Type](using
+      cache: StatementsCache
+  )(
+      terms: List[cache.quotes.reflect.Term]
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val itemType = TypeRepr.of[A]
+
+    // 1. Define Nil
+    val nil: cache.quotes.reflect.Term =
+      Ref(Symbol.requiredModule("scala.collection.immutable.Nil"))
+
+    // 2. Define Cons Module (::)
+    // The object name is encoded as "$colon$colon"
+    val consModule = Symbol.requiredModule("scala.collection.immutable.$colon$colon")
+    val applySym = consModule.methodMember("apply").head
+
+    // 3. Fold Right using ::.apply[T](head, tail)
+    terms.foldRight(nil) { (term, tail) =>
+      // A. Select 'apply' from the companion object
+      val sel = Select(Ref(consModule), applySym)
+
+      // B. Apply Type Argument [T]
+      // Generates: ::.apply[T]
+      // This turns the PolyType into a MethodType
+      val typedFun = TypeApply(sel, List(Inferred(itemType)))
+
+      // C. Apply Value Arguments (head, tail)
+      Apply(typedFun, List(term, tail))
+    }
+  }
+
 }

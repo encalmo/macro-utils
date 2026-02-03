@@ -18,7 +18,7 @@ object OptionUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
     cache.addStatement {
-      buildMatchTerm2[A](
+      buildMatchTerm[A](
         valueExpr.asTerm,
         onSome = { [B: Type] => term => StringUtils.applyToString(term) },
         onNone = { Literal(StringConstant("<none>")) }

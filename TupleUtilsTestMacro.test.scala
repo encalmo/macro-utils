@@ -106,4 +106,25 @@ object TupleUtilsTestMacro {
       MethodUtils.callMethod(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
     )
   }
+
+  inline def testCreateTuple[A, B](key: A, value: B): (A, B) = {
+    ${ testCreateTupleImpl[A, B]('{ key }, '{ value }) }
+  }
+
+  def testCreateTupleImpl[A: Type, B: Type](keyExpr: Expr[A], valueExpr: Expr[B])(using Quotes): Expr[(A, B)] = {
+    given cache: StatementsCache = new StatementsCache
+    testCreateTuple2Impl[A, B](keyExpr, valueExpr)
+  }
+
+  def testCreateTuple2Impl[A: Type, B: Type](
+      keyExpr: Expr[A],
+      valueExpr: Expr[B]
+  )(using cache: StatementsCache): Expr[(A, B)] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    cache.addStatement {
+      createTuple2(keyExpr.asTerm, valueExpr.asTerm)
+    }
+    cache.getBlockExprOf[(A, B)]
+  }
 }

@@ -39,4 +39,21 @@ object IterableUtilsTestMacro {
     result.asExprOf[String]
   }
 
+  inline def testCreateStaticList(term: String): List[String] = {
+    ${ testCreateStaticListImpl('{ term }) }
+  }
+
+  def testCreateStaticListImpl(termExpr: Expr[String])(using Quotes): Expr[List[String]] = {
+    given cache: StatementsCache = new StatementsCache
+    testCreateStaticList2Impl(termExpr)
+  }
+
+  def testCreateStaticList2Impl(using cache: StatementsCache)(termExpr: Expr[String]): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    val result = createStaticList[String](termExpr.valueOrAbort.toList.map(c => Literal(StringConstant(c.toString))))
+    // report.warning(result.show(using Printer.TreeCode))
+    result.asExprOf[List[String]]
+  }
+
 }
