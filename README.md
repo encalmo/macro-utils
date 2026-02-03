@@ -6,7 +6,6 @@
 
 ## Table of contents
 
-   - [Provided Utility Objects](#provided-utility-objects)
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Examples](#examples)
@@ -213,21 +212,33 @@ def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(usin
 ├── CaseClassUtils.test.scala
 ├── CaseClassUtilsTestMacro.test.scala
 ├── DebugUtils.scala
+├── EitherUtils.scala
+├── EitherUtils.test.scala
+├── EitherUtilsTestMacro.test.scala
 ├── EnumUtils.scala
 ├── EnumUtils.test.scala
 ├── EnumUtilsTestMacro.test.scala
+├── IterableUtils.scala
+├── IterableUtilsSpec.test.scala
+├── IterableUtilsTestMacro.test.scala
 ├── JavaIterableUtils.scala
 ├── JavaMapUtils.scala
 ├── JavaRecordUtils.scala
 ├── JavaRecordUtils.test.scala
 ├── JavaRecordUtilsTestMacro.test.scala
 ├── LICENSE
+├── MapUtils.scala
+├── MapUtilsSpec.test.scala
+├── MapUtilsTestMacro.test.scala
 ├── MethodUtils.scala
 ├── MethodUtils.test.scala
 ├── MethodUtilsTestMacro.test.scala
 ├── OpaqueTypeUtils.scala
 ├── OpaqueTypeUtils.test.scala
 ├── OpaqueUtilsTestMacro.test.scala
+├── OptionUtils.scala
+├── OptionUtils.test.scala
+├── OptionUtilsTestMacro.test.scala
 ├── Order.java
 ├── project.scala
 ├── QuotesUtils.scala
