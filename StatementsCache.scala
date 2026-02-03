@@ -5,11 +5,24 @@ import scala.quoted.*
 class StatementsCache(implicit val quotes: Quotes) {
   import quotes.reflect.*
 
+  private val statements: collection.mutable.ListBuffer[Statement] =
+    collection.mutable.ListBuffer.empty
+
   private val index: collection.mutable.Map[String, Statement] =
     collection.mutable.Map.empty
 
-  private val statements: collection.mutable.ListBuffer[Statement] =
-    collection.mutable.ListBuffer.empty
+  private val symbols: collection.mutable.Map[String, Symbol] =
+    collection.mutable.Map.empty
+
+  def addMethodCall(methodName: String): Unit = {
+    index.get(methodName) match {
+      case Some(methodCall) =>
+        statements.append(methodCall)
+
+      case None =>
+        report.errorAndAbort(s"Method call '$methodName' not found in statements cache")
+    }
+  }
 
   def addMethodCall(methodName: String, methodBody: => Expr[Unit]): Unit = {
     index.get(methodName) match {
@@ -41,10 +54,10 @@ class StatementsCache(implicit val quotes: Quotes) {
     }
   }
 
-  def callOrBuildMethodOfUnit(methodName: String, buildMethodBody: StatementsCache ?=> Unit): Unit = {
+  def addMethodOfUnit(methodName: String, buildMethodBody: StatementsCache ?=> Unit): quotes.reflect.Term = {
     index.get(methodName) match {
       case Some(methodCall) =>
-        statements.append(methodCall)
+        methodCall.asInstanceOf[quotes.reflect.Term]
 
       case None => {
 
@@ -72,9 +85,14 @@ class StatementsCache(implicit val quotes: Quotes) {
 
         index.put(methodName, methodCall)
         statements.append(methodDef)
-        statements.append(methodCall)
+        methodCall
       }
     }
+  }
+
+  def addMethodOfUnitCall(methodName: String, buildMethodBody: StatementsCache ?=> Unit): Unit = {
+    val methodCall: quotes.reflect.Term = addMethodOfUnit(methodName, buildMethodBody)
+    addStatement(methodCall)
   }
 
   def getValueRef(valueName: String): quotes.reflect.Ref = {
@@ -86,7 +104,7 @@ class StatementsCache(implicit val quotes: Quotes) {
     }
   }
 
-  def getOrElseCreateValueRef[T: Type](valueName: String, valueBody: Expr[T]): quotes.reflect.Ref = {
+  def getValueRefOfExpr[T: Type](valueName: String, valueBody: => Expr[T]): quotes.reflect.Ref = {
     index.get(valueName) match {
       case Some(valueRef) =>
         valueRef.asInstanceOf[quotes.reflect.Ref]
@@ -109,6 +127,50 @@ class StatementsCache(implicit val quotes: Quotes) {
         statements.append(valueDef)
         valueRef
       }
+    }
+  }
+
+  def getValueRefOfTerm[T: Type](valueName: String, valueBody: => quotes.reflect.Term): quotes.reflect.Ref = {
+    index.get(valueName) match {
+      case Some(valueRef) =>
+        valueRef.asInstanceOf[quotes.reflect.Ref]
+
+      case None => {
+
+        val valueSymbol: Symbol =
+          Symbol.newVal(
+            Symbol.spliceOwner,
+            valueName,
+            TypeRepr.of[T],
+            Flags.Private,
+            Symbol.noSymbol
+          )
+
+        val valueDef = ValDef(valueSymbol, Some(valueBody))
+        val valueRef = Ref(valueSymbol)
+
+        index.put(valueName, valueRef)
+        statements.append(valueDef)
+        valueRef
+      }
+    }
+  }
+
+  def getSymbol(symbolName: String): Symbol = {
+    symbols.get(symbolName) match {
+      case Some(symbol) => symbol
+      case None         =>
+        report.errorAndAbort(s"Symbol '$symbolName' not found in statements cache")
+    }
+  }
+
+  def getSymbol(symbolName: String, symbolBody: => Symbol): Symbol = {
+    symbols.get(symbolName) match {
+      case Some(symbol) => symbol
+      case None         =>
+        val symbol = symbolBody
+        symbols.put(symbolName, symbol)
+        symbol
     }
   }
 
@@ -175,5 +237,9 @@ object StatementsCache {
     given nested.quotes.type = nested.quotes
     buildBlock(using nested)
     nested.asTerm.asInstanceOf[outer.quotes.reflect.Term]
+  }
+
+  def addStatement(using cache: StatementsCache)(statement: cache.quotes.reflect.Statement): Unit = {
+    cache.addStatement(statement)
   }
 }

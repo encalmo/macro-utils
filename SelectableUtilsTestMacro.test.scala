@@ -18,7 +18,7 @@ object SelectableUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val bufferRef = cache.getOrElseCreateValueRef("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
     maybeVisitSelectable[T](
       functionExpr = { [Fields: Type] => StatementsCache ?=>

@@ -57,7 +57,7 @@ object MethodUtilsTestMacro {
       methodNameExpr: Expr[String]
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
-    cache.callOrBuildMethodOfUnit(
+    cache.addMethodOfUnitCall(
       methodNameExpr.valueOrAbort,
       { (nested: StatementsCache) ?=>
         import nested.quotes.reflect.*
@@ -67,7 +67,7 @@ object MethodUtilsTestMacro {
         }
       }
     )
-    cache.callOrBuildMethodOfUnit(
+    cache.addMethodOfUnitCall(
       methodNameExpr.valueOrAbort,
       { (nested: StatementsCache) ?=>
         import nested.quotes.reflect.*
