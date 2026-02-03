@@ -97,7 +97,7 @@ object AnnotationUtils {
       val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
       annotations.exists(_.name == name)
 
-    def getOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type, T: ToExpr](using
+    def getExprOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type, T: ToExpr](using
         Quotes
     )(parameter: String, defaultValue: Expr[T]): Expr[T] =
       import quotes.reflect.*
@@ -142,7 +142,25 @@ object AnnotationUtils {
         )
         .getOrElse(defaultValue)
 
-    def get[Annotation <: scala.annotation.StaticAnnotation: Type, T: ToExpr](using
+    def getStringOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    )(parameter: String, defaultValue: String): String =
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations
+        .find(_.name == name)
+        .flatMap(
+          _.params
+            .get(parameter)
+            .map {
+              case value: String => value
+              case value         =>
+                report.errorAndAbort(s"Expected String but got ${value.getClass.getName} for parameter '$parameter'")
+            }
+        )
+        .getOrElse(defaultValue)
+
+    def getExpr[Annotation <: scala.annotation.StaticAnnotation: Type, T: ToExpr](using
         Quotes
     )(parameter: String): Option[Expr[T]] =
       import quotes.reflect.*
@@ -179,6 +197,19 @@ object AnnotationUtils {
             Literal(CharConstant(value))
           case value =>
             report.errorAndAbort(s"Unsupported value type: ${value.getClass.getName}")
+        })
+
+    def getString[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    )(parameter: String): Option[String] =
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations
+        .find(_.name == name)
+        .flatMap(_.params.get(parameter).map {
+          case value: String => value
+          case value         =>
+            report.errorAndAbort(s"Expected String but got ${value.getClass.getName} for parameter '$parameter'")
         })
   }
 

@@ -242,4 +242,8 @@ object StatementsCache {
   def addStatement(using cache: StatementsCache)(statement: cache.quotes.reflect.Statement): Unit = {
     cache.addStatement(statement)
   }
+
+  def asNestedTerm(using cache: StatementsCache)(term: Any): cache.quotes.reflect.Term = {
+    term.asInstanceOf[cache.quotes.reflect.Term]
+  }
 }
