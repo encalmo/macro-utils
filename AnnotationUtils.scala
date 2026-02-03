@@ -107,6 +107,41 @@ object AnnotationUtils {
         .flatMap(_.params.get(parameter).map(value => Expr(value.asInstanceOf[T])))
         .getOrElse(defaultValue)
 
+    def getTermOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    )(parameter: String, defaultValue: cache.quotes.reflect.Term): cache.quotes.reflect.Term =
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations
+        .find(_.name == name)
+        .flatMap(
+          _.params
+            .get(parameter)
+            .map {
+              case value: String =>
+                Literal(StringConstant(value))
+              case value: Int =>
+                Literal(IntConstant(value))
+              case value: Boolean =>
+                Literal(BooleanConstant(value))
+              case value: Double =>
+                Literal(DoubleConstant(value))
+              case value: Float =>
+                Literal(FloatConstant(value))
+              case value: Long =>
+                Literal(LongConstant(value))
+              case value: Short =>
+                Literal(ShortConstant(value))
+              case value: Byte =>
+                Literal(ByteConstant(value))
+              case value: Char =>
+                Literal(CharConstant(value))
+              case value =>
+                report.errorAndAbort(s"Unsupported value type: ${value.getClass.getName}")
+            }
+        )
+        .getOrElse(defaultValue)
+
     def get[Annotation <: scala.annotation.StaticAnnotation: Type, T: ToExpr](using
         Quotes
     )(parameter: String): Option[Expr[T]] =
@@ -115,6 +150,36 @@ object AnnotationUtils {
       annotations
         .find(_.name == name)
         .flatMap(_.params.get(parameter).map(value => Expr(value.asInstanceOf[T])))
+
+    def getTerm[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    )(parameter: String): Option[cache.quotes.reflect.Term] =
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations
+        .find(_.name == name)
+        .flatMap(_.params.get(parameter).map {
+          case value: String =>
+            Literal(StringConstant(value))
+          case value: Int =>
+            Literal(IntConstant(value))
+          case value: Boolean =>
+            Literal(BooleanConstant(value))
+          case value: Double =>
+            Literal(DoubleConstant(value))
+          case value: Float =>
+            Literal(FloatConstant(value))
+          case value: Long =>
+            Literal(LongConstant(value))
+          case value: Short =>
+            Literal(ShortConstant(value))
+          case value: Byte =>
+            Literal(ByteConstant(value))
+          case value: Char =>
+            Literal(CharConstant(value))
+          case value =>
+            report.errorAndAbort(s"Unsupported value type: ${value.getClass.getName}")
+        })
   }
 
   extension (using Quotes)(annotations: List[quotes.reflect.Term]) {

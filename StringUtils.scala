@@ -33,8 +33,12 @@ object StringUtils {
   def applyToString(using Quotes)(term: quotes.reflect.Term): quotes.reflect.Term = {
     import quotes.reflect.*
 
-    val toStringSym = term.tpe.widen.typeSymbol.methodMember("toString").head
-    Apply(Select(term, toStringSym), Nil)
+    term.tpe match {
+      case t if t <:< TypeRepr.of[String] => term
+      case _                              =>
+        val toStringSym = term.tpe.widen.typeSymbol.methodMember("toString").head
+        Apply(Select(term, toStringSym), Nil)
+    }
   }
 
 }
