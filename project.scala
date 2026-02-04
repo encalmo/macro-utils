@@ -7,4 +7,4 @@
 //> using publish.license "MIT"
 //> using publish.developer "arturopala|Artur Opala|https://github.com/arturopala"
 //> using publish.versionControl "github:encalmo/macro-utils"
-//> using option -Wunused:imports -deprecation -Xcheck-macros
+//> using option -Wunused:imports -Xcheck-macros

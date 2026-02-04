@@ -1,7 +1,7 @@
 package org.encalmo.utils
 
 import IterableUtils.*
-import QuotesUtils.*
+
 import scala.quoted.*
 
 object IterableUtilsTestMacro {
@@ -21,17 +21,17 @@ object IterableUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    cache.addStatement {
+    cache.put {
       buildIterableLoop[A](
         valueExpr.asTerm,
         onItem = { [A: Type] => term =>
-          bufferRef.callMethod("append", List(StringUtils.applyToString(term)))
+          bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
         }
       )
     }
 
-    cache.addStatement {
-      bufferRef.callMethod("mkString", List(Literal(StringConstant(", "))))
+    cache.put {
+      bufferRef.methodCall("mkString", List(Literal(StringConstant(", "))))
     }
 
     val result = cache.asTerm

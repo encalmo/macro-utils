@@ -42,7 +42,7 @@ object MethodUtilsTestMacro {
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
     for (i <- 0 until timesExpr.valueOrAbort) {
-      cache.addMethodCall(methodNameExpr.valueOrAbort, methodBodyExpr)
+      cache.putMethodCall(methodNameExpr.valueOrAbort, methodBodyExpr)
     }
     cache.getBlockExprOfUnit
   }
@@ -57,23 +57,23 @@ object MethodUtilsTestMacro {
       methodNameExpr: Expr[String]
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
-    cache.addMethodOfUnitCall(
+    cache.putMethodOfUnitCall(
       methodNameExpr.valueOrAbort,
       { (nested: StatementsCache) ?=>
         import nested.quotes.reflect.*
-        nested.addStatement {
+        nested.put {
           MethodUtils
-            .callPrintln(using nested.quotes)(Literal(StringConstant("Hello World!")))
+            .callPrintln(using nested)(Literal(StringConstant("Hello World!")))
         }
       }
     )
-    cache.addMethodOfUnitCall(
+    cache.putMethodOfUnitCall(
       methodNameExpr.valueOrAbort,
       { (nested: StatementsCache) ?=>
         import nested.quotes.reflect.*
-        nested.addStatement {
+        nested.put {
           MethodUtils
-            .callPrintln(using nested.quotes)(Literal(StringConstant("Hello World!")))
+            .callPrintln(using nested)(Literal(StringConstant("Hello World!")))
         }
       }
     )

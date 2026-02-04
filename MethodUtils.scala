@@ -92,28 +92,29 @@ object MethodUtils {
     }
   }
 
-  /** Dynamically calls a method on 'target' with the given name and arguments.
+  /** Dynamically calls a method on 'target' with the given name and arguments. Adds the method call to the statements
+    * cache and returns it.
     */
-  def callMethod(using
-      Quotes
+  def methodCall(using
+      cache: StatementsCache
   )(
-      targetTerm: quotes.reflect.Term,
+      targetTerm: cache.quotes.reflect.Term,
       methodName: String,
-      argTerms: List[quotes.reflect.Term]
-  ): quotes.reflect.Term = {
+      argTerms: List[cache.quotes.reflect.Term]
+  ): cache.quotes.reflect.Term = {
     val tpe = targetTerm.tpe.dealias.widen
     val methodSym = findMethodByArity(tpe, methodName, argTerms.size)
     buildMethodCall(targetTerm, methodSym, argTerms)
   }
 
   def findMethodByArity(using
-      Quotes
+      cache: StatementsCache
   )(
-      tpe: quotes.reflect.TypeRepr,
+      tpe: cache.quotes.reflect.TypeRepr,
       name: String,
       arity: Int
-  ): quotes.reflect.Symbol = {
-    import quotes.reflect.*
+  ): cache.quotes.reflect.Symbol = {
+    import cache.quotes.reflect.*
 
     val clsSym = tpe.typeSymbol
     val candidates = clsSym.methodMember(name)
@@ -134,13 +135,14 @@ object MethodUtils {
   }
 
   def buildMethodCall(using
-      Quotes
+      cache: StatementsCache
   )(
-      target: quotes.reflect.Term,
-      methodSym: quotes.reflect.Symbol,
-      allArgs: List[quotes.reflect.Term]
-  ): quotes.reflect.Term = {
-    import quotes.reflect.*
+      target: cache.quotes.reflect.Term,
+      methodSym: cache.quotes.reflect.Symbol,
+      allArgs: List[cache.quotes.reflect.Term]
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
 
     // Start with the selection: target.method
     var fun: Term = Select(target, methodSym)
@@ -168,9 +170,10 @@ object MethodUtils {
   }
 
   def callPrintln(using
-      Quotes
-  )(term: quotes.reflect.Term, terms: quotes.reflect.Term*): quotes.reflect.Term = {
-    import quotes.reflect.*
+      cache: StatementsCache
+  )(term: cache.quotes.reflect.Term, terms: cache.quotes.reflect.Term*): cache.quotes.reflect.Term = {
+    import cache.quotes.reflect.*
+    given cache.quotes.type = cache.quotes
     val predefTerm = Ref(defn.PredefModule)
     val printlnSym = defn.PredefModule
       .methodMember("println")

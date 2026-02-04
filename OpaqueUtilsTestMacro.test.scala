@@ -50,7 +50,7 @@ object OpaqueUtilsTestMacro {
       "opaque",
       valueExpr.asTerm,
       functionWhenOpaqueTypeExpr = { [A: Type] => (name, value) =>
-        cache.addStatement(
+        cache.put(
           StringUtils.concat(
             Literal(StringConstant("opaque type with an upper bound of ")),
             Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode)))
@@ -58,7 +58,7 @@ object OpaqueUtilsTestMacro {
         )
       },
       functionWhenOtherExpr = { [A: Type] => (name, value) =>
-        cache.addStatement(
+        cache.put(
           StringUtils.concat(
             Literal(StringConstant("not an opaque type ")),
             Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode)))

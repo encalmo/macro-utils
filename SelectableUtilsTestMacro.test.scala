@@ -25,7 +25,7 @@ object SelectableUtilsTestMacro {
         visitFields[T, Fields](using cache)(
           valueExpr,
           functionExpr = { [A: Type] => (name, value) =>
-            cache.addStatement {
+            cache.put {
               val messageTerm =
                 StringUtils.concat(
                   Literal(StringConstant(name)),
@@ -34,7 +34,7 @@ object SelectableUtilsTestMacro {
                   Literal(StringConstant(" = ")),
                   StringUtils.applyToString(value)
                 )
-              MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+              MethodUtils.methodCall(using cache)(bufferRef, "append", List(messageTerm))
             }
           }
         )
@@ -43,8 +43,8 @@ object SelectableUtilsTestMacro {
 
     cache.getBlockExprOf(
       MethodUtils
-        .callMethod(
-          targetTerm = MethodUtils.callMethod(targetTerm = bufferRef, methodName = "toList", argTerms = Nil),
+        .methodCall(
+          targetTerm = MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil),
           methodName = "mkString",
           argTerms = List(Literal(StringConstant(", ")))
         )

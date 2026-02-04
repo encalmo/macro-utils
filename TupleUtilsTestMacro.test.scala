@@ -71,7 +71,7 @@ object TupleUtilsTestMacro {
       valueExpr.asTerm,
       functionWhenTupleExpr = { [A: Type] => (name, value, index) =>
         {
-          cache.addStatement {
+          cache.put {
             val messageTerm = StringUtils.concat(
               Literal(StringConstant("tuple element at ")),
               Literal(IntConstant(index)),
@@ -80,13 +80,13 @@ object TupleUtilsTestMacro {
               Literal(StringConstant(" = ")),
               StringUtils.applyToString(value)
             )
-            MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+            MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
           }
         }
       },
       functionWhenNamedTupleExpr = { [A: Type] => (name, value, index) =>
         {
-          cache.addStatement {
+          cache.put {
             val messageTerm = StringUtils.concat(
               Literal(StringConstant("named tuple element ")),
               Literal(StringConstant(name.getOrElse("unknown"))),
@@ -95,7 +95,7 @@ object TupleUtilsTestMacro {
               Literal(StringConstant(" = ")),
               StringUtils.applyToString(value)
             )
-            MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+            MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
           }
         }
       },
@@ -103,7 +103,7 @@ object TupleUtilsTestMacro {
       onEnd = '{}.asTerm
     )
     cache.getBlockExprOf(
-      MethodUtils.callMethod(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
+      MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
     )
   }
 
@@ -122,7 +122,7 @@ object TupleUtilsTestMacro {
   )(using cache: StatementsCache): Expr[(A, B)] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    cache.addStatement {
+    cache.put {
       createTuple2(keyExpr.asTerm, valueExpr.asTerm)
     }
     cache.getBlockExprOf[(A, B)]

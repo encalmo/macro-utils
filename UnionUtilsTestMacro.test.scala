@@ -45,7 +45,7 @@ object UnionUtilsTestMacro {
   )(using cache: StatementsCache): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    cache.addStatement {
+    cache.put {
       transformToMatchTerm[A](
         "union",
         valueExpr.asTerm,

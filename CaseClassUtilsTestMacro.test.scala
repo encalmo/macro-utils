@@ -1,7 +1,7 @@
 package org.encalmo.utils
 
 import CaseClassUtils.*
-import QuotesUtils.*
+
 import scala.quoted.*
 import org.encalmo.utils.AnnotationUtils.AnnotationInfo
 
@@ -30,7 +30,7 @@ object CaseClassUtilsTestMacro {
     visit[A](
       valueExpr.asTerm,
       { [A: Type] => (name, value, annotations) =>
-        cache.addStatement {
+        cache.put {
           val messageTerm =
             StringUtils.concat(
               Literal(StringConstant(name)),
@@ -39,13 +39,13 @@ object CaseClassUtilsTestMacro {
               Literal(StringConstant(" = ")),
               StringUtils.applyToString(value)
             )
-          MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+          MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
         }
       }
     )
 
     cache.getBlockExprOf(
-      bufferRef.callMethod("toList", Nil).asExprOf[List[String]]
+      bufferRef.methodCall("toList", Nil).asExprOf[List[String]]
     )
   }
 
@@ -96,12 +96,12 @@ object CaseClassUtilsTestMacro {
       [A: Type] =>
         (name, value, annotations) =>
           val term =
-            MethodUtils.callPrintln(using cache.quotes)(
+            MethodUtils.callPrintln(using cache)(
               Literal(StringConstant(name)),
               Literal(StringConstant(": ")),
               StringUtils.applyToString(value)
             )
-          cache.addStatement(term)
+          cache.put(term)
     )
     cache.getBlockExprOfUnit
   }

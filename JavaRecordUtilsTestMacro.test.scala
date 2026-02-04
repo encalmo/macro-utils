@@ -1,7 +1,7 @@
 package org.encalmo.utils
 
 import JavaRecordUtils.*
-import QuotesUtils.*
+
 import scala.quoted.*
 
 object JavaRecordUtilsTestMacro {
@@ -48,7 +48,7 @@ object JavaRecordUtilsTestMacro {
       "java record",
       valueExpr.asTerm,
       functionExpr = { [A: Type] => (name, value) =>
-        cache.addStatement {
+        cache.put {
           val messageTerm = StringUtils.concat(
             Literal(StringConstant(name)),
             Literal(StringConstant(": ")),
@@ -56,14 +56,14 @@ object JavaRecordUtilsTestMacro {
             Literal(StringConstant(" = ")),
             StringUtils.applyToString(value)
           )
-          MethodUtils.callMethod(bufferRef, "append", List(messageTerm))
+          MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
         }
       }
     )
     cache.getBlockExprOf(
       bufferRef
-        .callMethod("toList", Nil)
-        .callMethod("mkString", List(Literal(StringConstant(", "))))
+        .methodCall("toList", Nil)
+        .methodCall("mkString", List(Literal(StringConstant(", "))))
         .asExprOf[String]
     )
   }

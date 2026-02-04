@@ -1,7 +1,6 @@
 package org.encalmo.utils
 
 import scala.quoted.*
-import QuotesUtils.*
 
 object TupleUtils {
 
@@ -171,12 +170,12 @@ object TupleUtils {
 
     Type.of[In] match {
       case '[head *: tail] =>
-        cache.addStatement(onStart)
+        cache.put(onStart)
         visitTuple[In, head, tail](label, valueTerm, functionWhenTupleExpr, 0)
-        cache.addStatement(onEnd)
+        cache.put(onEnd)
 
       case '[NamedTuple.AnyNamedTuple] =>
-        cache.addStatement(onStart)
+        cache.put(onStart)
         val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
         TypeRepr.of[In].dealias match {
           case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
@@ -198,15 +197,15 @@ object TupleUtils {
               }
           case _ => ()
         }
-        cache.addStatement(onEnd)
+        cache.put(onEnd)
 
       case '[scala.EmptyTuple] =>
-        cache.addStatement(onStart)
-        cache.addStatement(onEnd)
+        cache.put(onStart)
+        cache.put(onEnd)
 
       case '[scala.NonEmptyTuple] =>
-        cache.addStatement(onStart)
-        cache.addStatement(onEnd)
+        cache.put(onStart)
+        cache.put(onEnd)
 
       case _ =>
         ()
@@ -230,7 +229,7 @@ object TupleUtils {
 
     functionExpr.apply[head](
       label,
-      valueTerm.callMethod("productElement", List(Literal(IntConstant(n)))),
+      valueTerm.methodCall("productElement", List(Literal(IntConstant(n)))),
       n
     )
 

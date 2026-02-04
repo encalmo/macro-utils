@@ -50,7 +50,7 @@ object EnumUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    cache.addStatement(
+    cache.put(
       transformToMatchTerm[A](
         valueExpr.asTerm,
         functionWhenCaseValueExpr = { [A: Type] => (name, value, annotations) =>

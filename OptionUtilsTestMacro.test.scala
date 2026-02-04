@@ -17,7 +17,7 @@ object OptionUtilsTestMacro {
   def testBuildMatchTerm2Impl[A: Type](using cache: StatementsCache)(valueExpr: Expr[Option[A]]): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    cache.addStatement {
+    cache.put {
       buildMatchTerm[A](
         valueExpr.asTerm,
         onSome = { [B: Type] => term => StringUtils.applyToString(term) },

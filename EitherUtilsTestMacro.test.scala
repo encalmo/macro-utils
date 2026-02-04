@@ -20,7 +20,7 @@ object EitherUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    cache.addStatement {
+    cache.put {
       buildMatchTerm[L, R](
         valueExpr.asTerm,
         onLeft = { [B: Type] => term =>

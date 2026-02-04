@@ -1,7 +1,7 @@
 package org.encalmo.utils
 
 import MapUtils.*
-import QuotesUtils.*
+
 import scala.quoted.*
 
 object MapUtilsTestMacro {
@@ -23,11 +23,11 @@ object MapUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    cache.addStatement {
+    cache.put {
       buildMapLoop[K, V](
         valueExpr.asTerm,
         onItem = { [K: Type, V: Type] => (key, value) =>
-          bufferRef.callMethod(
+          bufferRef.methodCall(
             "append",
             List(
               StringUtils.concat(
@@ -41,8 +41,8 @@ object MapUtilsTestMacro {
       )
     }
 
-    cache.addStatement {
-      bufferRef.callMethod("mkString", List(Literal(StringConstant(", "))))
+    cache.put {
+      bufferRef.methodCall("mkString", List(Literal(StringConstant(", "))))
     }
 
     val result = cache.asTerm
