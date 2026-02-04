@@ -4,9 +4,9 @@ object IterableUtils {
 
   import scala.quoted.*
 
-  def buildIterableLoop(using
+  def buildIterableLoop[A: Type](using
       cache: StatementsCache
-  )[A: Type](
+  )(
       iteratorName: String,
       target: cache.quotes.reflect.Term,
       onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term // Logic to apply to each 'item'
@@ -21,7 +21,12 @@ object IterableUtils {
 
     // --- Helper: Call a method, handling () vs no-args automatically ---
     def call(obj: Term, methodName: String): Term = {
-      val sym = obj.tpe.typeSymbol.methodMember(methodName).head
+      val typeSymbol = obj.tpe.typeSymbol
+      val sym = typeSymbol
+        .methodMember(methodName)
+        .headOption
+        .getOrElse(report.errorAndAbort(s"Could not find `$methodName` method on ${typeSymbol.name}"))
+
       val sel = Select(obj, sym)
 
       // Check if method expects empty parens: def foo() vs def foo

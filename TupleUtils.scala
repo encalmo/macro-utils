@@ -258,7 +258,10 @@ object TupleUtils {
 
     // 1. Resolve Symbols
     val tupleObjSym = Symbol.requiredModule("scala.Tuple2") // The object Tuple2
-    val applySym = tupleObjSym.methodMember("apply").head // The 'apply' method
+    val applySym = tupleObjSym
+      .methodMember("apply")
+      .headOption
+      .getOrElse(report.errorAndAbort("Could not find apply method on Tuple2")) // The 'apply' method
 
     // 2. Prepare Types [K, V]
     // We need to widen types to avoid over-specific singleton types (e.g. "foo".type)
