@@ -248,4 +248,28 @@ object TypeUtils {
     extract(TypeRepr.of[T])
   }
 
+  def extractTermsFromList[A: Type](listExpr: Expr[List[A]])(using Quotes): List[quotes.reflect.Term] = {
+    import quotes.reflect.*
+
+    listExpr match {
+      // CASE 1: Standard List(a, b, c) construction
+      // 'Varargs' is a special extractor that handles the sequence arguments
+      case '{ List(${ Varargs(args) }*) } =>
+        args.toList.map(_.asTerm)
+
+      // CASE 2: Explicit Cons chains: head :: tail
+      // e.g., 1 :: 2 :: Nil
+      case '{ ($head: A) :: ($tail: List[A]) } =>
+        head.asTerm :: extractTermsFromList(tail)
+
+      // CASE 3: Empty List (Nil or List.empty)
+      case '{ Nil } | '{ List.empty } =>
+        Nil
+
+      // CASE 4: The expression is not a static literal (e.g., it's a variable reference 'val x = ...; macro(x)')
+      case other =>
+        report.errorAndAbort(s"Expected a static List literal, but got a dynamic expression: ${other.show}")
+    }
+  }
+
 }

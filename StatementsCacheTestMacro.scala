@@ -39,7 +39,7 @@ object StatementsCacheTestMacro {
                 methodBody2.put(
                   nested
                     .getValueRef("buffer")
-                    .asInstanceOf[methodBody2.quotes.reflect.Term]
+                    .toTerm
                     .methodCall(
                       "append", {
                         arguments2.map(a =>

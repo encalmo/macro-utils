@@ -7,6 +7,7 @@ object MapUtils {
   def buildMapLoop[K: Type, V: Type](using
       cache: StatementsCache
   )(
+      iteratorName: String,
       target: cache.quotes.reflect.Term,
       onItem: [K: Type, V: Type] => (cache.quotes.reflect.Term, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
@@ -33,9 +34,9 @@ object MapUtils {
     val iteratorTerm = call(target, "iterator")
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
-      "it",
+      iteratorName,
       iteratorTerm.tpe.widen,
-      Flags.Mutable,
+      Flags.EmptyFlags,
       Symbol.noSymbol
     )
     val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))

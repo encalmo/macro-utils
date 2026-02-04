@@ -7,6 +7,7 @@ object IterableUtils {
   def buildIterableLoop(using
       cache: StatementsCache
   )[A: Type](
+      iteratorName: String,
       target: cache.quotes.reflect.Term,
       onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term // Logic to apply to each 'item'
   ): cache.quotes.reflect.Term = {
@@ -36,9 +37,9 @@ object IterableUtils {
     val iteratorTerm = call(target, "iterator")
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
-      "it",
+      iteratorName,
       iteratorTerm.tpe.widen,
-      Flags.Mutable,
+      Flags.EmptyFlags,
       Symbol.noSymbol
     )
     val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))
@@ -46,6 +47,7 @@ object IterableUtils {
 
     // 3. Build Loop Condition: "it.hasNext"
     val condition = call(iteratorRef, "hasNext")
+    val valueName = TypeNameUtils.valueNameOf[A]
 
     // 4. Build Loop Body: "{ val x = it.next(); onItem(x) }"
     val loopBody = {
@@ -55,7 +57,7 @@ object IterableUtils {
       // B. Bind result to 'x' (so user logic can reference it safely)
       val itemSym = Symbol.newVal(
         Symbol.spliceOwner,
-        "x",
+        valueName,
         itemType,
         Flags.EmptyFlags,
         Symbol.noSymbol

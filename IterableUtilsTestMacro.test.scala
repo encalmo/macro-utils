@@ -23,6 +23,7 @@ object IterableUtilsTestMacro {
 
     cache.put {
       buildIterableLoop[A](
+        "testIterator",
         valueExpr.asTerm,
         onItem = { [A: Type] => term =>
           bufferRef.methodCall("append", List(StringUtils.applyToString(term)))

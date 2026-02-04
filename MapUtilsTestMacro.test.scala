@@ -25,6 +25,7 @@ object MapUtilsTestMacro {
 
     cache.put {
       buildMapLoop[K, V](
+        "testIterator",
         valueExpr.asTerm,
         onItem = { [K: Type, V: Type] => (key, value) =>
           bufferRef.methodCall(

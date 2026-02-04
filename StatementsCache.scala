@@ -437,4 +437,13 @@ object StatementsCache {
         List(TypeTree.of[T])
       )
   }
+
+  extension (term: Any) {
+
+    def toTermOf(other: StatementsCache): other.quotes.reflect.Term =
+      term.asInstanceOf[other.quotes.reflect.Term]
+
+    def toTerm(using nested: StatementsCache): nested.quotes.reflect.Term =
+      term.asInstanceOf[nested.quotes.reflect.Term]
+  }
 }

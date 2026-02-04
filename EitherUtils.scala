@@ -32,7 +32,7 @@ object EitherUtils {
       val caseType = TypeIdent(classSym).tpe.appliedTo(tpeArgs)
 
       // B. Create Bind Symbol 'temp'
-      val tempSym = Symbol.newBind(Symbol.spliceOwner, "temp", Flags.EmptyFlags, caseType)
+      val tempSym = Symbol.newBind(Symbol.spliceOwner, TypeNameUtils.valueNameOf[T], Flags.EmptyFlags, caseType)
 
       // C. Create Pattern: temp @ (_ : CaseType)
       val typeCheckPattern = Typed(Wildcard(), Inferred(caseType))
