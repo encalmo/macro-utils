@@ -31,22 +31,6 @@ object MethodUtilsTestMacro {
     }
   }
 
-  inline def testAddMethodCallWithCache(inline times: Int, methodName: String, methodBody: => Unit): Unit = {
-    ${ testAddMethodCallWithCacheImpl('{ times }, '{ methodName }, '{ methodBody }) }
-  }
-
-  def testAddMethodCallWithCacheImpl(
-      timesExpr: Expr[Int],
-      methodNameExpr: Expr[String],
-      methodBodyExpr: Expr[Unit]
-  )(using Quotes): Expr[Unit] = {
-    val cache = new StatementsCache
-    for (i <- 0 until timesExpr.valueOrAbort) {
-      cache.putMethodCall(methodNameExpr.valueOrAbort, methodBodyExpr)
-    }
-    cache.getBlockExprOfUnit
-  }
-
   inline def testCallOrBuildMethodOfUnitWithCache(
       methodName: String
   ): Unit = {
@@ -57,9 +41,12 @@ object MethodUtilsTestMacro {
       methodNameExpr: Expr[String]
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
-    cache.putMethodOfUnitCall(
+    cache.putMethodCallOf[Unit](
       methodNameExpr.valueOrAbort,
-      { (nested: StatementsCache) ?=>
+      Nil,
+      Nil,
+      Nil,
+      { (nested: StatementsCache) ?=> arguments =>
         import nested.quotes.reflect.*
         nested.put {
           MethodUtils
@@ -67,9 +54,12 @@ object MethodUtilsTestMacro {
         }
       }
     )
-    cache.putMethodOfUnitCall(
+    cache.putMethodCallOf[Unit](
       methodNameExpr.valueOrAbort,
-      { (nested: StatementsCache) ?=>
+      Nil,
+      Nil,
+      Nil,
+      { (nested: StatementsCache) ?=> arguments =>
         import nested.quotes.reflect.*
         nested.put {
           MethodUtils

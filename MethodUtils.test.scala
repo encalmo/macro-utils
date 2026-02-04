@@ -49,12 +49,6 @@ class MethodUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("wrap in a method call") {
-    val buffer = collection.mutable.ListBuffer.empty[String]
-    testAddMethodCallWithCache(4, "foo", { buffer.append("foo") })
-    assertEquals(buffer.size, 4)
-  }
-
   test("call or build method of unit with cache") {
     testCallOrBuildMethodOfUnitWithCache("foo")
   }

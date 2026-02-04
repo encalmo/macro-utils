@@ -22,21 +22,41 @@ object StatementsCacheTestMacro {
     cache.put(bufferRef.methodCall("append", List(stringLiteral("Outer!"))))
 
     val nested = cache.createNestedScope()
-    nested.putMethodOfUnitCall(
+    nested.putMethodCallOf[Unit](
       "foo",
-      methodBody ?=> {
-        methodBody.putMethodOfUnitCall(
-          "bar",
-          methodBody2 ?=>
-            methodBody2.put(nested.getValueRef("buffer").term.methodCall("append", List(stringLiteral("Nested!")))),
-          scope = StatementsCache.Scope.TopLevel
-        )
-        methodBody.putMethodCall("bar")
-      },
+      List("x"),
+      List(nested.quotes.reflect.TypeRepr.of[String]),
+      List(nested.stringLiteral("ouch")),
+      methodBody ?=>
+        arguments => {
+          methodBody.putMethodCallOf[Unit](
+            "bar",
+            List("y"),
+            List(methodBody.quotes.reflect.TypeRepr.of[String]),
+            List(methodBody.stringLiteral("puff")),
+            methodBody2 ?=>
+              arguments2 => {
+                methodBody2.put(
+                  nested
+                    .getValueRef("buffer")
+                    .asInstanceOf[methodBody2.quotes.reflect.Term]
+                    .methodCall(
+                      "append", {
+                        arguments2.map(a =>
+                          methodBody2.quotes.reflect.Ref(a.symbol.asInstanceOf[methodBody2.quotes.reflect.Symbol])
+                        )
+                      }
+                    )
+                )
+              },
+            scope = StatementsCache.Scope.TopLevel
+          )
+          methodBody.putMethodCall("bar", List(methodBody.stringLiteral("few")))
+        },
       scope = StatementsCache.Scope.TopLevel
     )
 
-    cache.putMethodCall("bar")
+    cache.putMethodCall("bar", List(cache.stringLiteral("huhu")))
     cache.put(nested.asTermOf(cache))
     cache.put(bufferRef.methodCall("append", List(stringLiteral("Outer!"))))
     cache.put(bufferRef.methodCall("mkString", List(stringLiteral(", "))))
@@ -64,7 +84,7 @@ object StatementsCacheTestMacro {
     cache.put(bufferRef.methodCall("append", List(stringLiteral("Outer!"))))
 
     val nested = cache.createNestedScope()
-    nested.putMethodOfUnitCall(
+    nested.putParamlessMethodCallOf[Unit](
       "foo",
       methodBody ?=> (),
       scope = StatementsCache.Scope.Local

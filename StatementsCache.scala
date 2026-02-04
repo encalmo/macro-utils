@@ -11,7 +11,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   private val statements: collection.mutable.ListBuffer[Statement] =
     collection.mutable.ListBuffer.empty
 
-  protected val index: collection.mutable.Map[String, Statement] =
+  protected val index: collection.mutable.Map[String, Ref] =
     collection.mutable.Map.empty
 
   protected val symbols: collection.mutable.Map[String, Symbol] =
@@ -23,7 +23,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   }
 
   /** Lookup a symbol by name. */
-  def lookupSymbol(name: String): Option[Symbol] = {
+  def lookupSymbol(name: String): Option[quotes.reflect.Symbol] = {
     symbols.get(name)
   }
 
@@ -34,7 +34,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       definition: Any,
       reference: Any
   ): Unit = {
-    index.put(name, reference.asInstanceOf[quotes.reflect.Term])
+    index.put(name, reference.asInstanceOf[quotes.reflect.Ref])
     put(definition.asInstanceOf[quotes.reflect.ValOrDefDef])
   }
 
@@ -67,7 +67,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       ): Unit = {
         scope match {
           case StatementsCache.Scope.Local =>
-            this.index.put(name, reference.asInstanceOf[quotes.reflect.Term])
+            this.index.put(name, reference.asInstanceOf[quotes.reflect.Ref])
             this.put(definition.asInstanceOf[quotes.reflect.ValOrDefDef])
 
           case StatementsCache.Scope.TopLevel =>
@@ -91,139 +91,73 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   }
 
   /** Lookup named method call of type Unit and add to the statements list, otherwise abort with an error. */
-  def putMethodCall(methodName: String): Unit = {
+  def putMethodCall(methodName: String, parameters: List[Term]): Unit = {
     lookupStatement(methodName) match {
-      case Some(methodCall) =>
-        put(methodCall)
+      case Some(methodRef) =>
+        put(methodRef.asInstanceOf[quotes.reflect.Ref].appliedToArgs(parameters))
 
       case None =>
         report.errorAndAbort("[" + cacheId + s"] Method call '$methodName' not found in statements cache")
     }
   }
 
-  /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def putMethodCall(
-      methodName: String,
-      methodBody: => Expr[Unit],
-      scope: StatementsCache.Scope = Scope.Local
-  ): Unit = {
-    lookupStatement(methodName) match {
-      case Some(methodCall) =>
-        statements.append(methodCall)
-
-      case None => {
-
-        val methodSymbol: Symbol =
-          Symbol.newMethod(
-            Symbol.spliceOwner,
-            methodName,
-            MethodType(Nil)(_ => Nil, _ => TypeRepr.of[Unit]),
-            Flags.EmptyFlags,
-            Symbol.noSymbol
-          )
-
-        val methodDef = DefDef(
-          methodSymbol,
-          { _ => Some(methodBody.asTerm.changeOwner(methodSymbol)) }
-        )
-
-        val methodCall = Apply(Ref(methodSymbol), Nil)
-
-        declare(scope, methodName, methodDef, methodCall)
-        put(methodCall)
-      }
-    }
-  }
-
-  /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def createMethodOfUnit(
-      methodName: String,
-      buildMethodBody: StatementsCache ?=> Unit,
-      scope: StatementsCache.Scope = Scope.Local
-  ): quotes.reflect.Term = {
-    lookupStatement(methodName) match {
-      case Some(methodCall) =>
-        methodCall.asInstanceOf[quotes.reflect.Term]
-
-      case None => {
-
-        val methodBody: Term = {
-          val nested = createNestedScope("createMethodOfUnit:" + methodName)
-          buildMethodBody(using nested)
-          nested.addUnitStatement()
-          nested.asTerm.asInstanceOf[Term]
-        }
-
-        val methodSymbol: Symbol =
-          Symbol.newMethod(
-            Symbol.spliceOwner,
-            methodName,
-            MethodType(Nil)(_ => Nil, _ => TypeRepr.of[Unit]),
-            Flags.EmptyFlags,
-            Symbol.noSymbol
-          )
-
-        val methodDef = DefDef(
-          methodSymbol,
-          { _ => Some(methodBody.changeOwner(methodSymbol)) }
-        )
-
-        val methodCall = Apply(Ref(methodSymbol), Nil)
-
-        declare(scope, methodName, methodDef, methodCall)
-        methodCall
-      }
-    }
-  }
-
-  /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def putMethodOfUnitCall(
-      methodName: String,
-      buildMethodBody: StatementsCache ?=> Unit,
-      scope: StatementsCache.Scope = Scope.Local
-  ): Unit = {
-    val methodCall: quotes.reflect.Term = createMethodOfUnit(methodName, buildMethodBody, scope)
-    put(methodCall)
-  }
-
   /** Lookup or create a new method of type T and return the method call */
   def createMethodOf[T: Type](
       methodName: String,
-      buildMethodBody: StatementsCache ?=> Unit,
+      parameterNames: List[String],
+      parameterTypes: List[TypeRepr],
+      buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
       scope: StatementsCache.Scope = Scope.Local
   ): quotes.reflect.Term = {
     lookupStatement(methodName) match {
-      case Some(methodCall) =>
-        methodCall.asInstanceOf[quotes.reflect.Term]
+      case Some(methodRef) =>
+        methodRef.asInstanceOf[quotes.reflect.Ref]
 
       case None => {
 
-        val methodBody: Term = {
-          val nested = createNestedScope(
-            "createMethodOf[" + TypeRepr.of[T].show(using Printer.TypeReprShortCode) + "]:" + methodName
-          )
-          buildMethodBody(using nested)
-          nested.asTerm.asInstanceOf[Term]
-        }
+        if (parameterNames.length != parameterTypes.length)
+        then report.errorAndAbort("Parameter names and types must have the same length for method " + methodName)
+
+        val methodType = MethodType(parameterNames)(
+          (_: MethodType) => parameterTypes, // Argument types
+          (_: MethodType) => TypeRepr.of[T] // Return type
+        )
 
         val methodSymbol: Symbol =
           Symbol.newMethod(
             Symbol.spliceOwner,
             methodName,
-            MethodType(Nil)(_ => Nil, _ => TypeRepr.of[T]),
+            methodType,
             Flags.EmptyFlags,
             Symbol.noSymbol
           )
 
         val methodDef = DefDef(
           methodSymbol,
-          { _ => Some(methodBody.changeOwner(methodSymbol)) }
+          {
+            case List(argSymbols) =>
+              Some({
+                val nested = createNestedScope(
+                  "createMethodOf[" + TypeRepr.of[T].show(using Printer.TypeReprShortCode) + "]:" + methodName
+                )
+                buildMethodBody(using nested)(argSymbols.map(_.asInstanceOf[quotes.reflect.Tree]))
+                if (
+                    TypeRepr.of[T] <:< TypeRepr.of[Unit]
+                    && !(nested.typeRepr <:< nested.quotes.reflect.TypeRepr.of[Unit])
+                  )
+                then nested.put(nested.unit)
+                nested.asTerm.asInstanceOf[Term]
+              }.changeOwner(methodSymbol))
+
+            case other =>
+              report.errorAndAbort("Unexpected parameter structure " + other + " for method " + methodName)
+          }
         )
 
-        val methodCall = Apply(Ref(methodSymbol), Nil)
+        val methodRef = Ref(methodSymbol)
 
-        declare(scope, methodName, methodDef, methodCall)
-        methodCall
+        declare(scope, methodName, methodDef, methodRef)
+        methodRef
       }
     }
   }
@@ -231,11 +165,28 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   /** Lookup or create a new method of type T and add the method call to the statements list */
   def putMethodCallOf[T: Type](
       methodName: String,
+      parameterNames: List[String],
+      parameterTypes: List[TypeRepr],
+      parameters: List[Term],
+      buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
+      scope: StatementsCache.Scope = Scope.Local
+  ): Unit = {
+    if (parameters.length != parameterNames.length)
+    then report.errorAndAbort("Parameter lists must have the same length for method " + methodName)
+    val methodRef: quotes.reflect.Term =
+      createMethodOf[T](methodName, parameterNames, parameterTypes, buildMethodBody, scope)
+    put(methodRef.appliedToArgs(parameters))
+  }
+
+  /** Lookup or create a new method of type T and add the method call to the statements list */
+  def putParamlessMethodCallOf[T: Type](
+      methodName: String,
       buildMethodBody: StatementsCache ?=> Unit,
       scope: StatementsCache.Scope = Scope.Local
   ): Unit = {
-    val methodCall: quotes.reflect.Term = createMethodOf[T](methodName, buildMethodBody, scope)
-    put(methodCall)
+    val methodRef: quotes.reflect.Term =
+      createMethodOf[T](methodName, Nil, Nil, _ => buildMethodBody, scope)
+    put(methodRef.appliedToArgs(Nil))
   }
 
   /** Lookup value reference by name and return the reference, otherwise abort with an error. */
@@ -356,6 +307,15 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
     statements.toList
   }
 
+  def typeRepr: TypeRepr = {
+    statements.lastOption
+      .map {
+        case term: Term => term.tpe
+        case statement  => TypeRepr.of[Unit]
+      }
+      .getOrElse(TypeRepr.of[Unit])
+  }
+
   /** Convert the statements list to a term, otherwise abort with an error. */
   def asTerm: Term = {
     if statements.isEmpty
@@ -456,13 +416,6 @@ object StatementsCache {
 
   def stringLiteral(using cache: StatementsCache)(value: String): cache.quotes.reflect.Literal = {
     cache.stringLiteral(value)
-  }
-
-  extension (using cache: StatementsCache)(any: Any) {
-    def term = any.asInstanceOf[cache.quotes.reflect.Term]
-    def statement = any.asInstanceOf[cache.quotes.reflect.Statement]
-    def symbol = any.asInstanceOf[cache.quotes.reflect.Symbol]
-    def ref = any.asInstanceOf[cache.quotes.reflect.Ref]
   }
 
   extension (using cache: StatementsCache)(term: cache.quotes.reflect.Term) {
