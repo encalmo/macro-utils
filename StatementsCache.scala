@@ -1,6 +1,7 @@
 package org.encalmo.utils
 
 import scala.quoted.*
+import org.encalmo.utils.StatementsCache.Scope
 
 /** A cache for statements and symbols. It can be nested to create a hierarchy of caches. Captures Quotes context.
   */
@@ -26,6 +27,17 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
     symbols.get(name)
   }
 
+  /** Add method or value definition to statements list and index reference to the definition by provided name */
+  def declare(
+      scope: StatementsCache.Scope,
+      name: String,
+      definition: Any,
+      reference: Any
+  ): Unit = {
+    index.put(name, reference.asInstanceOf[quotes.reflect.Term])
+    put(definition.asInstanceOf[quotes.reflect.ValOrDefDef])
+  }
+
   /** Create a nested statements cache that fallbacks to lookup in the outer cache if statement or symbol is not found
     * in the nested cache. Lists of statements stay separated.
     */
@@ -46,6 +58,35 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
           .get(name)
           .orElse(outer.lookupSymbol(name).map(_.asInstanceOf[quotes.reflect.Symbol]))
       }
+
+      override def declare(
+          scope: StatementsCache.Scope,
+          name: String,
+          definition: Any,
+          reference: Any
+      ): Unit = {
+        scope match {
+          case StatementsCache.Scope.Local =>
+            this.index.put(name, reference.asInstanceOf[quotes.reflect.Term])
+            this.put(definition.asInstanceOf[quotes.reflect.ValOrDefDef])
+
+          case StatementsCache.Scope.TopLevel =>
+            outer.declare(
+              scope,
+              name,
+              definition.asInstanceOf[outer.quotes.reflect.ValOrDefDef],
+              reference.asInstanceOf[outer.quotes.reflect.Term]
+            )
+
+          case StatementsCache.Scope.Outer =>
+            outer.declare(
+              StatementsCache.Scope.Local,
+              name,
+              definition.asInstanceOf[outer.quotes.reflect.ValOrDefDef],
+              reference.asInstanceOf[outer.quotes.reflect.Term]
+            )
+        }
+      }
     }
   }
 
@@ -53,7 +94,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   def putMethodCall(methodName: String): Unit = {
     lookupStatement(methodName) match {
       case Some(methodCall) =>
-        statements.append(methodCall)
+        put(methodCall)
 
       case None =>
         report.errorAndAbort("[" + cacheId + s"] Method call '$methodName' not found in statements cache")
@@ -61,7 +102,11 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   }
 
   /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def putMethodCall(methodName: String, methodBody: => Expr[Unit]): Unit = {
+  def putMethodCall(
+      methodName: String,
+      methodBody: => Expr[Unit],
+      scope: StatementsCache.Scope = Scope.Local
+  ): Unit = {
     lookupStatement(methodName) match {
       case Some(methodCall) =>
         statements.append(methodCall)
@@ -84,15 +129,18 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
 
         val methodCall = Apply(Ref(methodSymbol), Nil)
 
-        index.put(methodName, methodCall)
-        statements.append(methodDef)
-        statements.append(methodCall)
+        declare(scope, methodName, methodDef, methodCall)
+        put(methodCall)
       }
     }
   }
 
   /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def createMethodOfUnit(methodName: String, buildMethodBody: StatementsCache ?=> Unit): quotes.reflect.Term = {
+  def createMethodOfUnit(
+      methodName: String,
+      buildMethodBody: StatementsCache ?=> Unit,
+      scope: StatementsCache.Scope = Scope.Local
+  ): quotes.reflect.Term = {
     lookupStatement(methodName) match {
       case Some(methodCall) =>
         methodCall.asInstanceOf[quotes.reflect.Term]
@@ -122,21 +170,28 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
 
         val methodCall = Apply(Ref(methodSymbol), Nil)
 
-        index.put(methodName, methodCall)
-        put(methodDef)
+        declare(scope, methodName, methodDef, methodCall)
         methodCall
       }
     }
   }
 
   /** Lookup or create a new method of type Unit and add the method call to the statements list */
-  def putMethodOfUnitCall(methodName: String, buildMethodBody: StatementsCache ?=> Unit): Unit = {
-    val methodCall: quotes.reflect.Term = createMethodOfUnit(methodName, buildMethodBody)
+  def putMethodOfUnitCall(
+      methodName: String,
+      buildMethodBody: StatementsCache ?=> Unit,
+      scope: StatementsCache.Scope = Scope.Local
+  ): Unit = {
+    val methodCall: quotes.reflect.Term = createMethodOfUnit(methodName, buildMethodBody, scope)
     put(methodCall)
   }
 
   /** Lookup or create a new method of type T and return the method call */
-  def createMethodOf[T: Type](methodName: String, buildMethodBody: StatementsCache ?=> Unit): quotes.reflect.Term = {
+  def createMethodOf[T: Type](
+      methodName: String,
+      buildMethodBody: StatementsCache ?=> Unit,
+      scope: StatementsCache.Scope = Scope.Local
+  ): quotes.reflect.Term = {
     lookupStatement(methodName) match {
       case Some(methodCall) =>
         methodCall.asInstanceOf[quotes.reflect.Term]
@@ -167,16 +222,19 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
 
         val methodCall = Apply(Ref(methodSymbol), Nil)
 
-        index.put(methodName, methodCall)
-        put(methodDef)
+        declare(scope, methodName, methodDef, methodCall)
         methodCall
       }
     }
   }
 
   /** Lookup or create a new method of type T and add the method call to the statements list */
-  def putMethodCallOf[T: Type](methodName: String, buildMethodBody: StatementsCache ?=> Unit): Unit = {
-    val methodCall: quotes.reflect.Term = createMethodOf[T](methodName, buildMethodBody)
+  def putMethodCallOf[T: Type](
+      methodName: String,
+      buildMethodBody: StatementsCache ?=> Unit,
+      scope: StatementsCache.Scope = Scope.Local
+  ): Unit = {
+    val methodCall: quotes.reflect.Term = createMethodOf[T](methodName, buildMethodBody, scope)
     put(methodCall)
   }
 
@@ -193,7 +251,11 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   /** Lookup or create a new value reference of type T and add the value definition to the statements list, then return
     * the value reference
     */
-  def getValueRefOfExpr[T: Type](valueName: String, valueBody: => Expr[T]): quotes.reflect.Ref = {
+  def getValueRefOfExpr[T: Type](
+      valueName: String,
+      valueBody: => Expr[T],
+      scope: StatementsCache.Scope = Scope.Local
+  ): quotes.reflect.Ref = {
     lookupStatement(valueName) match {
       case Some(valueRef) =>
         valueRef.asInstanceOf[quotes.reflect.Ref]
@@ -212,8 +274,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
         val valueDef = ValDef(valueSymbol, Some(valueBody.asTerm))
         val valueRef = Ref(valueSymbol)
 
-        index.put(valueName, valueRef)
-        put(valueDef)
+        declare(scope, valueName, valueDef, valueRef)
         valueRef
       }
     }
@@ -222,7 +283,11 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   /** Lookup or create a new value reference of type T and add the value definition to the statements list, then return
     * the value reference
     */
-  def getValueRefOfTerm[T: Type](valueName: String, valueBody: => quotes.reflect.Term): quotes.reflect.Ref = {
+  def getValueRefOfTerm[T: Type](
+      valueName: String,
+      valueBody: => quotes.reflect.Term,
+      scope: StatementsCache.Scope = Scope.Local
+  ): quotes.reflect.Ref = {
     lookupStatement(valueName) match {
       case Some(valueRef) =>
         valueRef.asInstanceOf[quotes.reflect.Ref]
@@ -241,8 +306,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
         val valueDef = ValDef(valueSymbol, Some(valueBody))
         val valueRef = Ref(valueSymbol)
 
-        index.put(valueName, valueRef)
-        put(valueDef)
+        declare(scope, valueName, valueDef, valueRef)
         valueRef
       }
     }
@@ -365,6 +429,12 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
 }
 
 object StatementsCache {
+
+  enum Scope {
+    case TopLevel
+    case Outer
+    case Local
+  }
 
   def createNestedScope(cacheId: String = "nested")(using cache: StatementsCache): StatementsCache =
     cache.createNestedScope(cacheId)

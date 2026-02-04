@@ -5,6 +5,11 @@ class StatementsCacheSpec extends munit.FunSuite {
 
   test("testCreateNestedScope") {
     val result = testCreateNestedScope()
-    assertEquals(result, "Outer!, Nested!, Outer!")
+    assertEquals(result, "Outer!, Nested!, Nested!, Nested!, Outer!")
+  }
+
+  test("testCreateEmptyNestedScope") {
+    val result = testCreateEmptyNestedScope()
+    assertEquals(result, "Outer!, Outer!")
   }
 }
