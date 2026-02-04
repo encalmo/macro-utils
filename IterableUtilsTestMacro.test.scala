@@ -12,10 +12,14 @@ object IterableUtilsTestMacro {
 
   def testBuildIterableLoopImpl[A: Type](valueExpr: Expr[Iterable[A]])(using Quotes): Expr[String] = {
     given cache: StatementsCache = new StatementsCache
-    testBuildIterableLoop2Impl[A](valueExpr)
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    testBuildIterableLoop2Impl[A](valueExpr.asTerm)
   }
 
-  def testBuildIterableLoop2Impl[A: Type](using cache: StatementsCache)(valueExpr: Expr[Iterable[A]]): Expr[String] = {
+  def testBuildIterableLoop2Impl[A: Type](using
+      cache: StatementsCache
+  )(valueTerm: cache.quotes.reflect.Term): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
@@ -24,7 +28,7 @@ object IterableUtilsTestMacro {
     cache.put {
       buildIterableLoop[A](
         "testIterator",
-        valueExpr.asTerm,
+        valueTerm,
         onItem = { [A: Type] => term =>
           bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
         }
