@@ -4,6 +4,7 @@ import scala.quoted.*
 
 object StringUtils {
 
+  /** Concatenate a list of terms to a string. */
   def concat(using Quotes)(term: quotes.reflect.Term, terms: quotes.reflect.Term*): quotes.reflect.Term = {
     import quotes.reflect.*
 
@@ -30,14 +31,18 @@ object StringUtils {
 
   }
 
+  /** Best effort to convert a term to a string. */
   def applyToString(using Quotes)(term: quotes.reflect.Term): quotes.reflect.Term = {
     import quotes.reflect.*
 
     term.tpe match {
       case t if t <:< TypeRepr.of[String] => term
       case _                              =>
-        val toStringSym = term.tpe.widen.typeSymbol.methodMember("toString").head
-        Apply(Select(term, toStringSym), Nil)
+        val sym = term.tpe.dealias.widen.typeSymbol
+        sym.methodMember("toString").match {
+          case toStringSym :: _ => Apply(Select(term, toStringSym), Nil)
+          case Nil              => term
+        }
     }
   }
 

@@ -295,25 +295,17 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   /** Convert the statements list to a term, otherwise abort with an error. */
   def asTerm: Term = {
     if statements.isEmpty
-    then report.errorAndAbort("[" + cacheId + "] No statements to get block expression of")
+    then unit
     else if statements.size == 1
     then
       statements.head match {
-        case term: Term =>
-          term
-        case statement =>
-          report.errorAndAbort(
-            "[" + cacheId + "] Expected term but got: " + statement.show(using Printer.TreeCode)
-          )
+        case term: Term => term
+        case statement  => Block(statements.toList, unit)
       }
     else
       statements.last match {
-        case term: Term =>
-          Block(statements.init.toList, term)
-        case statement =>
-          report.errorAndAbort(
-            "[" + cacheId + "] Expected last statement to be a term but got: " + statement.show(using Printer.TreeCode)
-          )
+        case term: Term => Block(statements.init.toList, term)
+        case statement  => Block(statements.toList, unit)
       }
   }
 
@@ -323,18 +315,42 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   }
 
   def getBlockExprOfUnit: Expr[Unit] = {
-    Block(statements.toList, '{}.asTerm).asExprOf[Unit]
+    Block(statements.toList, unit).asExprOf[Unit]
   }
 
   def getBlockExprOf[T: Type]: Expr[T] = {
     if statements.isEmpty
-    then report.errorAndAbort("[" + cacheId + "] No statements to get block expression of")
+    then
+      report.errorAndAbort(
+        "[" + cacheId + "] No statements to get block expression of type " + TypeRepr
+          .of[T]
+          .show(using Printer.TypeReprShortCode)
+      )
     else if statements.size == 1
-    then statements.head.asExprOf[T]
+    then
+      statements.head match {
+        case term: Term if term.tpe <:< TypeRepr.of[T] => term.asExprOf[T]
+        case term: Term                                =>
+          report.errorAndAbort(
+            "[" + cacheId + "] Expected first statement to be a term of type " + TypeRepr
+              .of[T]
+              .show(using Printer.TypeReprShortCode) + " but got: " + term.tpe.show(using Printer.TypeReprShortCode)
+          )
+        case statement =>
+          report.errorAndAbort(
+            "[" + cacheId + "] Expected first statement to be a term but got: " + statement.show(using Printer.TreeCode)
+          )
+      }
     else
       statements.last match {
-        case term: Term =>
+        case term: Term if term.tpe <:< TypeRepr.of[T] =>
           Block(statements.init.toList, term).asExprOf[T]
+        case term: Term =>
+          report.errorAndAbort(
+            "[" + cacheId + "] Expected last statement to be a term of type " + TypeRepr
+              .of[T]
+              .show(using Printer.TypeReprShortCode) + " but got: " + term.tpe.show(using Printer.TypeReprShortCode)
+          )
         case statement =>
           report.errorAndAbort(
             "[" + cacheId + "] Expected last statement to be a term but got: " + statement.show(using Printer.TreeCode)
@@ -342,8 +358,8 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       }
   }
 
-  def getBlockExprOf[T: Type](lastStatementExpr: Expr[T]): Expr[T] = {
-    Block(statements.toList, lastStatementExpr.asTerm).asExprOf[T]
+  def getBlockExprOf[T: Type](returnExpr: Expr[T]): Expr[T] = {
+    Block(statements.toList, returnExpr.asTerm).asExprOf[T]
   }
 
 }
