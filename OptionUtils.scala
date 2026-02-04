@@ -28,17 +28,18 @@ object OptionUtils {
     val someType = TypeRepr.of[Some].appliedTo(contentType)
 
     // B. Create Bind Symbol 'temp' of type Some[T]
-    val tempSym = Symbol.newBind(Symbol.spliceOwner, "temp", Flags.EmptyFlags, someType)
+    val argSym =
+      Symbol.newBind(Symbol.spliceOwner, TypeNameUtils.valueNameOf[A], Flags.EmptyFlags, someType)
 
     // C. Create Pattern: temp @ (_ : Some[T])
     // This explicitly forces an 'isInstanceOf[Some[T]]' check.
     val typeCheckPattern = Typed(Wildcard(), Inferred(someType))
-    val bindPattern = Bind(tempSym, typeCheckPattern)
+    val bindPattern = Bind(argSym, typeCheckPattern)
 
     // D. Create Body: temp.value
     // We access the 'value' accessor of the Some class.
     val valueSym = someClassSym.caseFields.head
-    val extractedValue = Select(Ref(tempSym), valueSym)
+    val extractedValue = Select(Ref(argSym), valueSym)
 
     val caseSome =
       contentType.asType match {
