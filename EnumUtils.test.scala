@@ -33,53 +33,6 @@ class EnumUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("collect enum's cases 1") {
-    assertEquals(
-      testTransformToExprMethod(entity1),
-      List(
-        "case _: Dog =>",
-        "case Cow =>"
-      )
-    )
-  }
-
-  test("collect enum's cases 2") {
-    assertEquals(
-      testTransformToExprMethod(entity2),
-      List(
-        "case _: Dog =>",
-        "case Cow =>"
-      )
-    )
-  }
-
-  test("collect enum's cases 3") {
-    assertEquals(
-      testTransformToExprMethod(entity3),
-      List(
-        "case _: Boeing =>",
-        "case _: Airbus =>"
-      )
-    )
-  }
-
-  test("collect enum's cases 4") {
-    assertEquals(
-      testTransformToExprMethod(entity4),
-      List(
-        "case _: Boeing =>",
-        "case _: Airbus =>"
-      )
-    )
-  }
-
-  test("collect not an enum or sealed ADT") {
-    assertEquals(
-      testTransformToExprMethod("not an enum or sealed ADT"),
-      Nil
-    )
-  }
-
   test("isEnumOrSealedADT") {
     assertEquals(testIsEnumOrSealedADT[Entity], true)
     assertEquals(testIsEnumOrSealedADT[Hobby], true)

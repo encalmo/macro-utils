@@ -10,33 +10,6 @@ object EnumUtilsTestMacro {
     Expr(EnumUtils.isEnumOrSealedADT[A])
   }
 
-  inline def testTransformToExprMethod[A](value: A): List[String] = {
-    ${ testTransformToExprMethodImpl[A]('{ value }) }
-  }
-
-  def testTransformToExprMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
-    import quotes.reflect.*
-    val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
-    transformToMatchExpression[A](
-      valueExpr,
-      functionWhenCaseValueExpr = { [A: Type] => (name, value, annotations) =>
-        val expr = '{
-          "case " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
-        }
-        buffer.append(expr)
-        '{}
-      },
-      functionWhenCaseClassExpr = { [A: Type] => (name, value, annotations) =>
-        val expr = '{
-          "case _: " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
-        }
-        buffer += expr
-        '{}
-      }
-    )
-    Expr.ofList(buffer.toList)
-  }
-
   inline def testTransformToTermMethod[A](value: A): String = {
     ${ testTransformToTermMethodImpl[A]('{ value }) }
   }

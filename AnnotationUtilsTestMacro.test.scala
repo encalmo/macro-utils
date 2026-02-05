@@ -32,7 +32,7 @@ object AnnotationUtilsTestMacro {
         .typeSymbol
         .caseFields
         .find(_.name == fieldName)
-        .map(fields => computeFieldAnnotations[A](fieldName).map(_.toString))
+        .map(fields => computeFieldAnnotations(TypeRepr.of[A], fieldName).map(_.toString))
         .getOrElse(Set.empty[String])
         .map(Expr(_))
         .toList
