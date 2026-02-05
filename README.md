@@ -8,11 +8,6 @@
 
 - [Dependencies](#dependencies)
 - [Usage](#usage)
-- [Examples](#examples)
-   - [Example: Using `CaseClassUtils.visit` to Perform an Operation on Case Class Fields](#example:-using-`caseclassutils.visit`-to-perform-an-operation-on-case-class-fields)
-   - [Example: Using `CaseClassUtils.collect` to Inspect Case Class Fields](#example:-using-`caseclassutils.collect`-to-inspect-case-class-fields)
-   - [Example: Using `CaseClassUtils.transformToList` to create an instance with all string values upper cased](#example:-using-`caseclassutils.transformtolist`-to-create-an-instance-with-all-string-values-upper-cased)
-   - [Example: Using `CaseClassUtils.transformToExprOfTuple` to create a tuple from case class fields](#example:-using-`caseclassutils.transformtoexproftuple`-to-create-a-tuple-from-case-class-fields)
 - [Project content](#project-content)
 
 ## Dependencies
@@ -58,10 +53,14 @@ or with SCALA-CLI
 ├── EnumUtils.test.scala
 ├── EnumUtilsTestMacro.test.scala
 ├── IterableUtils.scala
-├── IterableUtilsSpec.test.scala
+├── IterableUtils.test.scala
 ├── IterableUtilsTestMacro.test.scala
+├── JavaIterable.test.scala
+├── JavaIterableTestMacro.test.scala
 ├── JavaIterableUtils.scala
 ├── JavaMapUtils.scala
+├── JavaMapUtilsSpec.test.scala
+├── JavaMapUtilsTestMacro.test.scala
 ├── JavaRecordUtils.scala
 ├── JavaRecordUtils.test.scala
 ├── JavaRecordUtilsTestMacro.test.scala
