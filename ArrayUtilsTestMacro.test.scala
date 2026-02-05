@@ -23,15 +23,18 @@ object ArrayUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    cache.put {
-      buildArrayLoop(
-        TypeNameUtils.valueNameOf[A],
-        TypeRepr.of[A],
-        valueTerm,
-        functionOnItem = { (tpe, term) =>
-          bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+    TypeRepr.of[Array[A]] match {
+      case TypeReprIsArray(tpe) =>
+        cache.put {
+          buildArrayLoop(
+            TypeNameUtils.valueNameOf(tpe),
+            tpe,
+            valueTerm,
+            functionOnItem = { (tpe, term) =>
+              bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+            }
+          )
         }
-      )
     }
 
     cache.put {

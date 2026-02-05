@@ -4,6 +4,22 @@ import scala.quoted.*
 
 object ArrayUtils {
 
+  object TypeReprIsArray {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Option[quotes.reflect.TypeRepr] = {
+      import quotes.reflect.*
+      val arraySym = defn.ArrayClass
+      val widened = tpe.widen.dealias
+      if (widened.derivesFrom(arraySym)) {
+        widened.baseType(arraySym) match {
+          case AppliedType(_, List(elementType)) => Some(elementType)
+          case _                                 => Some(TypeRepr.of[Any])
+        }
+      } else {
+        None
+      }
+    }
+  }
+
   /** Build an efficient loop over an array. */
   def buildArrayLoop(using
       cache: StatementsCache
