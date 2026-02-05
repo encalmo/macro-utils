@@ -24,7 +24,7 @@ object SelectableUtilsTestMacro {
       functionExpr = { [Fields: Type] => StatementsCache ?=>
         visitFields[T, Fields](using cache)(
           valueExpr,
-          functionExpr = { [A: Type] => (name, value) =>
+          functionExpr = { [A: Type] => (tpe, name, value) =>
             cache.put {
               val messageTerm =
                 StringUtils.concat(

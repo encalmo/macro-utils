@@ -49,11 +49,11 @@ object OpaqueUtilsTestMacro {
     visit[A](
       "opaque",
       valueExpr.asTerm,
-      functionWhenOpaqueTypeExpr = { [A: Type] => (name, value) =>
+      functionWhenOpaqueTypeExpr = { [A: Type] => (tpe, name, value) =>
         cache.put(
           StringUtils.concat(
             Literal(StringConstant("opaque type with an upper bound of ")),
-            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode)))
+            Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
           )
         )
       },

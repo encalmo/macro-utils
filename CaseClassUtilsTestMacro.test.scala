@@ -29,7 +29,7 @@ object CaseClassUtilsTestMacro {
 
     visit[A](
       valueExpr.asTerm,
-      { [A: Type] => (name, value, annotations) =>
+      { [A: Type] => (tpe, name, value, annotations) =>
         cache.put {
           val messageTerm =
             StringUtils.concat(
@@ -94,7 +94,7 @@ object CaseClassUtilsTestMacro {
     CaseClassUtils.visit[T](using cache)(
       valueExpr.asTerm,
       [A: Type] =>
-        (name, value, annotations) =>
+        (tpe, name, value, annotations) =>
           val term =
             MethodUtils.callPrintln(using cache)(
               Literal(StringConstant(name)),

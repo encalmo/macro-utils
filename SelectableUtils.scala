@@ -113,7 +113,7 @@ object SelectableUtils {
       cache: StatementsCache
   )(
       valueExpr: Expr[In],
-      functionExpr: [A: Type] => (String, cache.quotes.reflect.Term) => Unit
+      functionExpr: [A: Type] => (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -130,11 +130,12 @@ object SelectableUtils {
         nameTypeList
           .zip(valueTypeList)
           .zipWithIndex
-          .map { case ((nameType, valueType), index) =>
+          .map { case ((nameType, valueTpe), index) =>
             val name = TypeNameUtils.shortBaseName(nameType.show(using Printer.TypeReprShortCode))
-            valueType.asType match {
+            valueTpe.asType match {
               case '[value] =>
                 functionExpr.apply[value](
+                  valueTpe,
                   name, {
                     val arg = Literal(StringConstant(name))
                     Apply(Select(term, selectDynamicSym), List(arg))

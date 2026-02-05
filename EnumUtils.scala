@@ -133,11 +133,13 @@ object EnumUtils {
   )(
       valueTerm: cache.quotes.reflect.Term,
       functionWhenCaseValueExpr: [A: Type] => (
+          cache.quotes.reflect.TypeRepr,
           String,
           cache.quotes.reflect.Term,
           Set[AnnotationInfo]
       ) => cache.quotes.reflect.Term,
       functionWhenCaseClassExpr: [A: Type] => (
+          cache.quotes.reflect.TypeRepr,
           String,
           cache.quotes.reflect.Term,
           Set[AnnotationInfo]
@@ -200,12 +202,14 @@ object EnumUtils {
                 if (enumCase.isTerm)
                 then
                   functionWhenCaseValueExpr.apply[t](
+                    tpe,
                     enumCase.name,
                     valueTerm,
                     enumCaseSymbol.annotations.computeInfo
                   )
                 else
                   functionWhenCaseClassExpr.apply[t](
+                    tpe,
                     enumCase.name,
                     valueTerm,
                     enumCaseSymbol.annotations.computeInfo

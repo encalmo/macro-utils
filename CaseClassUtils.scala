@@ -258,6 +258,7 @@ object CaseClassUtils {
   )(
       valueTerm: cache.quotes.reflect.Term,
       functionExpr: [A: Type] => (
+          cache.quotes.reflect.TypeRepr,
           String, // name
           cache.quotes.reflect.Term, // value
           Set[AnnotationInfo] // annotations
@@ -278,9 +279,10 @@ object CaseClassUtils {
               tpe.asType match {
                 case '[t] =>
                   functionExpr.apply[t](
+                    tpe,
                     caseField.name,
                     Select(valueTerm, caseField),
-                    AnnotationUtils.computeFieldAnnotations[p](caseField.name)
+                    AnnotationUtils.computeFieldAnnotationsFromTpe(parentTpe, caseField.name)
                   )
               }
             }

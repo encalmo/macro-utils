@@ -53,7 +53,7 @@ object EnumUtilsTestMacro {
     cache.put(
       transformToMatchTerm[A](
         valueExpr.asTerm,
-        functionWhenCaseValueExpr = { [A: Type] => (name, value, annotations) =>
+        functionWhenCaseValueExpr = { [A: Type] => (tpe, name, value, annotations) =>
           StringUtils.concat(
             Literal(StringConstant("case ")),
             Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
@@ -61,7 +61,7 @@ object EnumUtilsTestMacro {
             value
           )
         },
-        functionWhenCaseClassExpr = { [A: Type] => (name, value, annotations) =>
+        functionWhenCaseClassExpr = { [A: Type] => (tpe, name, value, annotations) =>
           StringUtils.concat(
             Literal(StringConstant("case _: ")),
             Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),

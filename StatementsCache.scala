@@ -453,5 +453,8 @@ object StatementsCache {
 
     def toTerm(using nested: StatementsCache): nested.quotes.reflect.Term =
       term.asInstanceOf[nested.quotes.reflect.Term]
+
+    def toTypeRepr(using nested: StatementsCache): nested.quotes.reflect.TypeRepr =
+      term.asInstanceOf[nested.quotes.reflect.TypeRepr]
   }
 }

@@ -18,6 +18,10 @@ object AnnotationUtils {
       .computeInfo
   }
 
+  def annotationsOf(using Quotes)(tpe: quotes.reflect.TypeRepr): Set[AnnotationInfo] = {
+    tpe.typeSymbol.annotations.computeInfo
+  }
+
   def getFieldAnnotations[A: Type](
       fieldName: String
   )(using Quotes): List[quotes.reflect.Term] = {
@@ -51,6 +55,24 @@ object AnnotationUtils {
       .getOrElse(
         report.errorAndAbort(
           s"Field '$fieldName' not found in ${TypeRepr.of[A].typeSymbol.name}"
+        )
+      )
+      .annotations
+      .computeInfo
+  }
+
+  def computeFieldAnnotationsFromTpe(using
+      Quotes
+  )(
+      tpe: quotes.reflect.TypeRepr,
+      fieldName: String
+  ): Set[AnnotationInfo] = {
+    import quotes.reflect.*
+    tpe.typeSymbol.primaryConstructor.paramSymss.flatten
+      .find(_.name == fieldName)
+      .getOrElse(
+        report.errorAndAbort(
+          s"Field '$fieldName' not found in ${tpe.typeSymbol.name}"
         )
       )
       .annotations

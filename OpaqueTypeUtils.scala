@@ -55,7 +55,11 @@ object OpaqueTypeUtils {
   )(
       label: String,
       valueTerm: cache.quotes.reflect.Term,
-      functionWhenOpaqueTypeExpr: [A: Type] => (String, cache.quotes.reflect.Term) => Unit,
+      functionWhenOpaqueTypeExpr: [A: Type] => (
+          cache.quotes.reflect.TypeRepr,
+          String,
+          cache.quotes.reflect.Term
+      ) => Unit,
       functionWhenOtherExpr: [A: Type] => (String, cache.quotes.reflect.Term) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
@@ -67,6 +71,7 @@ object OpaqueTypeUtils {
           tpe.asType match {
             case '[t] =>
               functionWhenOpaqueTypeExpr.apply[t](
+                tpe,
                 label,
                 valueTerm
               )
