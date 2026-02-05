@@ -56,7 +56,6 @@ object ArrayUtilsTestMacro {
       cache: StatementsCache
   )(valueTerms: List[cache.quotes.reflect.Term]): Expr[Array[A]] = {
     given cache.quotes.type = cache.quotes
-    import cache.quotes.reflect.*
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 

@@ -10,13 +10,13 @@ object TypeNameUtils {
       case idx => name.substring(0, idx)
     }
     name2.lastIndexOf('.') match {
-      case -1  => name2.replace("\"", "")
+      case -1  => name2.replace("\"", "").replaceAll("\\s|\\|", "_")
       case idx => name2.substring(idx + 1)
     }
   }
 
   inline def underscored(name: String): String = {
-    name.replace(".", "_")
+    name.replaceAll("\\.|\\s|\\|", "_")
   }
 
   inline def toValueName(name: String): String = {

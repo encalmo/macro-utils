@@ -436,6 +436,14 @@ object StatementsCache {
         Select(term, asInstanceOfSym),
         List(TypeTree.of[T])
       )
+
+    def callAsInstanceOf(typeTree: cache.quotes.reflect.TypeTree): cache.quotes.reflect.Term =
+      import cache.quotes.reflect.*
+      val asInstanceOfSym = defn.AnyClass.methodMember("asInstanceOf").head
+      TypeApply(
+        Select(term, asInstanceOfSym),
+        List(typeTree)
+      )
   }
 
   extension (term: Any) {

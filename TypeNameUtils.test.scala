@@ -5,6 +5,7 @@ import TypeNameUtils.*
 class TypeNameUtilsSpec extends munit.FunSuite {
 
   test("typeName") {
+    assertEquals(typeName[String | Int | Boolean], "String___Int___Boolean")
     assertEquals(typeName[TestEnum], "TestEnum")
     assertEquals(typeName[Order], "Order")
     assertEquals(typeName[Status], "Status")
@@ -37,6 +38,11 @@ class TypeNameUtilsSpec extends munit.FunSuite {
     assertEquals(typeName[Short], "Short")
     assertEquals(typeName[Byte], "Byte")
     assertEquals(typeName[Char], "Char")
+  }
+
+  test("underscored") {
+    assertEquals(underscored("String | Int | Boolean"), "String___Int___Boolean")
+    assertEquals(underscored("Test.Enum"), "Test_Enum")
   }
 
   test("valueName") {

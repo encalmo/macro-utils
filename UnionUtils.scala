@@ -64,7 +64,7 @@ object UnionUtils {
       cache: StatementsCache
   )[In: Type](
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
+      functionExpr: [A: Type] => (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -74,17 +74,19 @@ object UnionUtils {
         .inspectUnionType[In]
         .getOrElse(Nil)
         .map { tpe =>
-          val typeTree = tpe.asType match {
-            case '[t] => TypeTree.of[t]
+          tpe.asType match {
+            case '[t] =>
+              val bindSym = Symbol.newBind(
+                Symbol.spliceOwner,
+                TypeNameUtils.valueNameOf[t],
+                Flags.EmptyFlags,
+                tpe
+              )
+              val typeCheckPattern = Typed(Wildcard(), TypeTree.of[t])
+              val matchCasePattern = Bind(bindSym, typeCheckPattern)
+              val matchCaseBody = functionExpr.apply[t](tpe, Ref(bindSym))
+              CaseDef(matchCasePattern, None, matchCaseBody)
           }
-          val matchCasePattern = Typed(Wildcard(), typeTree)
-          val matchCaseBody =
-            tpe.asType match {
-              case '[t] =>
-                functionExpr.apply[t](valueTerm)
-            }
-
-          CaseDef(matchCasePattern, None, matchCaseBody)
         }
 
     Match(valueTerm, matchCaseDefs)

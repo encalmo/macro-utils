@@ -69,14 +69,14 @@ object TupleUtilsTestMacro {
     visit[A](
       Some("tuple"),
       valueExpr.asTerm,
-      functionWhenTupleExpr = { [A: Type] => (name, value, index) =>
+      functionWhenTupleExpr = { [A: Type] => (tpe, name, value, index) =>
         {
           cache.put {
             val messageTerm = StringUtils.concat(
               Literal(StringConstant("tuple element at ")),
               Literal(IntConstant(index)),
               Literal(StringConstant(": ")),
-              Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
+              Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
               Literal(StringConstant(" = ")),
               StringUtils.applyToString(value)
             )
@@ -84,14 +84,14 @@ object TupleUtilsTestMacro {
           }
         }
       },
-      functionWhenNamedTupleExpr = { [A: Type] => (name, value, index) =>
+      functionWhenNamedTupleExpr = { [A: Type] => (tpe, name, value, index) =>
         {
           cache.put {
             val messageTerm = StringUtils.concat(
               Literal(StringConstant("named tuple element ")),
               Literal(StringConstant(name.getOrElse("unknown"))),
               Literal(StringConstant(": ")),
-              Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
+              Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
               Literal(StringConstant(" = ")),
               StringUtils.applyToString(value)
             )

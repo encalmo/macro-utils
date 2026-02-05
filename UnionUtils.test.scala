@@ -87,4 +87,28 @@ class UnionUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("transformTupleToMatchTerm union's cases 1") {
+    type Union = String | Int | Boolean
+    val e1: Union = "Rex"
+    val e2: Union = 1
+    val e3: Union = true
+    val entity: (Union, Union, Union) = (e1, e2, e3)
+    assertEquals(
+      testTransformTupleToMatchTermMethod(entity),
+      "case _: String => Rex, case _: Int => 1, case _: Boolean => true"
+    )
+  }
+
+  test("transformTupleToMatchTerm union's cases 2") {
+    type Union = String | Int | Boolean
+    val e1: Union = "Rex"
+    val e2: Union = 1
+    val e3: Union = true
+    val entity: (a: Union, b: Union, c: Union) = (a = e1, b = e2, c = e3)
+    assertEquals(
+      testTransformTupleToMatchTermMethod(entity),
+      "case _: String => Rex, case _: Int => 1, case _: Boolean => true"
+    )
+  }
+
 }

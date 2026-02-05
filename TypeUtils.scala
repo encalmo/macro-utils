@@ -248,6 +248,23 @@ object TypeUtils {
     extract(TypeRepr.of[T])
   }
 
+  def tupleTypeToTypeList[T: Type](using Quotes): List[quotes.reflect.TypeRepr] = {
+    import quotes.reflect.*
+    val consType = TypeRepr.of[*:].typeSymbol
+
+    def extract(t: TypeRepr): List[quotes.reflect.TypeRepr] = t.dealias match {
+      case AppliedType(base, List(head, tail)) if base.typeSymbol == consType =>
+        head :: extract(tail)
+
+      case t if t =:= TypeRepr.of[EmptyTuple] =>
+        Nil
+
+      case other =>
+        report.errorAndAbort(s"Unexpected type structure: ${other.show}")
+    }
+    extract(TypeRepr.of[T])
+  }
+
   def extractTermsFromList[A: Type](listExpr: Expr[List[A]])(using Quotes): List[quotes.reflect.Term] = {
     import quotes.reflect.*
 

@@ -28,7 +28,7 @@ object IterableUtilsTestMacro {
     TupleUtils.visit[A](
       label = Some("test"),
       valueTerm = valueTerm,
-      functionWhenTupleExpr = { [B: Type] => (name, value, index) =>
+      functionWhenTupleExpr = { [B: Type] => (tpe, name, value, index) =>
         Type.of[B] match {
           case '[Iterable[b]] =>
             cache.put {
@@ -44,7 +44,7 @@ object IterableUtilsTestMacro {
         }
         '{}
       },
-      functionWhenNamedTupleExpr = { [A: Type] => (name, value, index) =>
+      functionWhenNamedTupleExpr = { [A: Type] => (tpe, name, value, index) =>
         '{}.asTerm
       },
       onStart = '{}.asTerm,
