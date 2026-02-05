@@ -8,6 +8,7 @@ object ArrayUtils {
   def buildArrayLoop[A: Type](using
       cache: StatementsCache
   )(
+      arrayNamePrefix: String,
       target: cache.quotes.reflect.Term,
       onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
@@ -18,18 +19,21 @@ object ArrayUtils {
     val intType = TypeRepr.of[Int]
 
     // 1. Array Variable
-    val arraySym = Symbol.newVal(Symbol.spliceOwner, "arr", target.tpe.widen, Flags.EmptyFlags, Symbol.noSymbol)
+    val arraySym =
+      Symbol.newVal(Symbol.spliceOwner, arrayNamePrefix + "Array", target.tpe.widen, Flags.EmptyFlags, Symbol.noSymbol)
     val arrayValDef = ValDef(arraySym, Some(target))
     val arrayRef = Ref(arraySym)
 
     // 2. Length Variable
     val lengthSym = defn.ArrayClass.methodMember("length").head
-    val lenSym = Symbol.newVal(Symbol.spliceOwner, "len", intType, Flags.EmptyFlags, Symbol.noSymbol)
+    val lenSym =
+      Symbol.newVal(Symbol.spliceOwner, arrayNamePrefix + "ArrayLength", intType, Flags.EmptyFlags, Symbol.noSymbol)
     val lenValDef = ValDef(lenSym, Some(Select(arrayRef, lengthSym)))
     val lenRef = Ref(lenSym)
 
     // 3. Index Variable
-    val indexSym = Symbol.newVal(Symbol.spliceOwner, "i", intType, Flags.Mutable, Symbol.noSymbol)
+    val indexSym =
+      Symbol.newVal(Symbol.spliceOwner, arrayNamePrefix + "ArrayIndex", intType, Flags.Mutable, Symbol.noSymbol)
     val indexValDef = ValDef(indexSym, Some(Literal(IntConstant(0))))
     val indexRef = Ref(indexSym)
 
@@ -53,7 +57,7 @@ object ArrayUtils {
       val applySym = defn.ArrayClass.methodMember("apply").head
       val itemTerm = Apply(Select(arrayRef, applySym), List(indexRef))
 
-      val itemSym = Symbol.newVal(Symbol.spliceOwner, "x", itemType, Flags.EmptyFlags, Symbol.noSymbol)
+      val itemSym = Symbol.newVal(Symbol.spliceOwner, arrayNamePrefix, itemType, Flags.EmptyFlags, Symbol.noSymbol)
       val itemValDef = ValDef(itemSym, Some(itemTerm))
 
       // B. User Logic

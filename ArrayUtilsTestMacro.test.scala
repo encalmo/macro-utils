@@ -25,6 +25,7 @@ object ArrayUtilsTestMacro {
 
     cache.put {
       buildArrayLoop[A](
+        TypeNameUtils.valueNameOf[A],
         valueTerm,
         onItem = { [A: Type] => term =>
           bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
