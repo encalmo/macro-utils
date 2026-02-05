@@ -47,9 +47,8 @@ object UnionUtilsTestMacro {
     import cache.quotes.reflect.*
     cache.put {
       transformToMatchTerm[A](
-        "union",
         valueExpr.asTerm,
-        functionExpr = { [A: Type] => (name, value) =>
+        functionExpr = { [A: Type] => value =>
           StringUtils.concat(
             Literal(StringConstant("case _: ")),
             Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
@@ -59,6 +58,8 @@ object UnionUtilsTestMacro {
         }
       )
     }
-    cache.getBlockExprOf[String]
+    val result = cache.asTerm
+    // report.warning(result.show(using Printer.TreeCode))
+    result.asExprOf[String]
   }
 }

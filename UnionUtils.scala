@@ -63,9 +63,8 @@ object UnionUtils {
   def transformToMatchTerm(using
       cache: StatementsCache
   )[In: Type](
-      label: String,
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => (String, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionExpr: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -82,10 +81,7 @@ object UnionUtils {
           val matchCaseBody =
             tpe.asType match {
               case '[t] =>
-                functionExpr.apply[t](
-                  label,
-                  valueTerm
-                )
+                functionExpr.apply[t](valueTerm)
             }
 
           CaseDef(matchCasePattern, None, matchCaseBody)
