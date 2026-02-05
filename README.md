@@ -23,11 +23,11 @@
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.25"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.26"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.25
+    //> using dep org.encalmo::macro-utils:0.9.26
 
 ## Examples
 
@@ -208,6 +208,9 @@ def upperCaseStringFields2Impl[T: Type, R <: Product: Type](value: Expr[T])(usin
 ├── AnnotationUtils.scala
 ├── AnnotationUtils.test.scala
 ├── AnnotationUtilsTestMacro.test.scala
+├── ArrayUtils.scala
+├── ArrayUtils.test.scala
+├── ArrayUtilsTestMacro.test.scala
 ├── CaseClassUtils.scala
 ├── CaseClassUtils.test.scala
 ├── CaseClassUtilsTestMacro.test.scala
