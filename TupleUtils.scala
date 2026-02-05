@@ -190,7 +190,7 @@ object TupleUtils {
                       Apply(
                         Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
                         List(Literal(IntConstant(index)))
-                      ),
+                      ).callAsInstanceOf[value],
                       index
                     )
                 }
@@ -229,7 +229,7 @@ object TupleUtils {
 
     functionExpr.apply[head](
       label,
-      valueTerm.methodCall("productElement", List(Literal(IntConstant(n)))),
+      valueTerm.methodCall("productElement", List(Literal(IntConstant(n)))).callAsInstanceOf[head],
       n
     )
 

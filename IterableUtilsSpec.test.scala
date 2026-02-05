@@ -6,8 +6,8 @@ class IterableUtilsSpec extends munit.FunSuite {
 
   test("testBuildIterableLoop and apply to List") {
     assertEquals(
-      testBuildIterableLoop[Int](List(1, 2, 3)),
-      "1, 2, 3"
+      testBuildIterableLoop((List(1, 2, 3), List("one", "two", "three"))),
+      "1, 2, 3, one, two, three"
     )
   }
 

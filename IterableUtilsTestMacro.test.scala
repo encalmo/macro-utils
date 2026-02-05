@@ -6,18 +6,18 @@ import scala.quoted.*
 
 object IterableUtilsTestMacro {
 
-  inline def testBuildIterableLoop[A](value: Iterable[A]): String = {
+  inline def testBuildIterableLoop[A <: Tuple](value: A): String = {
     ${ testBuildIterableLoopImpl[A]('{ value }) }
   }
 
-  def testBuildIterableLoopImpl[A: Type](valueExpr: Expr[Iterable[A]])(using Quotes): Expr[String] = {
+  def testBuildIterableLoopImpl[A <: Tuple: Type](valueExpr: Expr[Tuple])(using Quotes): Expr[String] = {
     given cache: StatementsCache = new StatementsCache
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
     testBuildIterableLoop2Impl[A](valueExpr.asTerm)
   }
 
-  def testBuildIterableLoop2Impl[A: Type](using
+  def testBuildIterableLoop2Impl[A <: Tuple: Type](using
       cache: StatementsCache
   )(valueTerm: cache.quotes.reflect.Term): Expr[String] = {
     given cache.quotes.type = cache.quotes
@@ -25,15 +25,31 @@ object IterableUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    cache.put {
-      buildIterableLoop[A](
-        "testIterator",
-        valueTerm,
-        onItem = { [A: Type] => term =>
-          bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+    TupleUtils.visit[A](
+      label = Some("test"),
+      valueTerm = valueTerm,
+      functionWhenTupleExpr = { [B: Type] => (name, value, index) =>
+        Type.of[B] match {
+          case '[Iterable[b]] =>
+            cache.put {
+              buildIterableLoop[b](
+                "testIterator_" + index,
+                value,
+                onItem = { [C: Type] => term =>
+                  bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+                }
+              )
+            }
+          case _ => ()
         }
-      )
-    }
+        '{}
+      },
+      functionWhenNamedTupleExpr = { [A: Type] => (name, value, index) =>
+        '{}.asTerm
+      },
+      onStart = '{}.asTerm,
+      onEnd = '{}.asTerm
+    )
 
     cache.put {
       bufferRef.methodCall("mkString", List(Literal(StringConstant(", "))))

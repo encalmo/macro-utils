@@ -1,24 +1,82 @@
 package org.encalmo.utils
 
+import scala.quoted.*
+
 object IterableUtils {
 
-  import scala.quoted.*
-
-  def buildIterableLoop[A: Type](using
+  def buildIterableLoop[CC: Type, A: Type](using
       cache: StatementsCache
   )(
       iteratorName: String,
       target: cache.quotes.reflect.Term,
-      onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term // Logic to apply to each 'item'
+      onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
-    target.tpe.asType match {
-      case '[c] =>
-        buildIterableLoop[c, A](iteratorName, target, onItem)
+    import cache.quotes.reflect.*
+
+    val itemType = TypeRepr.of[A]
+    val iterableType = TypeRepr.of[Iterable].appliedTo(itemType)
+
+    // FIX 1: Explicitly cast the target to Iterable[A]
+    // This ensures that 'iterator' is selected from a known trait,
+    // solving the "does not have a denotation" error.
+    val typedTarget = Typed(target, Inferred(iterableType))
+
+    // 2. Resolve Standard Symbols
+    val iterableClass = Symbol.requiredClass("scala.collection.Iterable")
+    val iteratorClass = Symbol.requiredClass("scala.collection.Iterator")
+
+    val iteratorMethodSym = iterableClass.methodMember("iterator").head
+    val hasNextSym = iteratorClass.methodMember("hasNext").head
+    val nextSym = iteratorClass.methodMember("next").head
+
+    // 3. Create Iterator Variable
+    // Select from the TYPED target, not the raw target
+    val iteratorTerm = Select(typedTarget, iteratorMethodSym)
+
+    val iteratorType = TypeRepr.of[Iterator].appliedTo(itemType)
+
+    val iteratorSym = Symbol.newVal(
+      Symbol.spliceOwner,
+      iteratorName,
+      iteratorType,
+      Flags.Mutable,
+      Symbol.noSymbol
+    )
+    val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))
+    val iteratorRef = Ref(iteratorSym)
+
+    // 4. Build Loop Condition: it.hasNext
+    val condition = Select(iteratorRef, hasNextSym)
+
+    // 5. Build Loop Body
+    val loopBody = {
+      // it.next()
+      val nextTerm = Apply(Select(iteratorRef, nextSym), Nil)
+
+      val itemSym = Symbol.newVal(
+        Symbol.spliceOwner,
+        "x",
+        itemType,
+        Flags.EmptyFlags,
+        Symbol.noSymbol
+      )
+      val itemValDef = ValDef(itemSym, Some(nextTerm))
+
+      val userCode = onItem[A](Ref(itemSym))
+
+      Block(
+        List(itemValDef, userCode),
+        Literal(UnitConstant())
+      )
     }
+
+    // 6. Return Block
+    val whileTerm = While(condition, loopBody)
+    Block(List(iteratorValDef), whileTerm)
   }
 
-  def buildIterableLoop[CC: Type, A: Type](using
+  def buildIterableLoop[A: Type](using
       cache: StatementsCache
   )(
       iteratorName: String,
@@ -31,27 +89,7 @@ object IterableUtils {
     // 1. Determine the Item Type (T)
     // We extract T from Iterable[T] to type the loop variable correctly.
     val iterableType = Symbol.requiredClass("scala.collection.Iterable")
-
-    val collectionType = TypeRepr.of[CC].dealias.widen
     val itemType = TypeRepr.of[A]
-
-    // --- Helper: Call a method, handling () vs no-args automatically ---
-    def callTyped[T: Type](obj: Term, methodName: String): Term = {
-      val typeSymbol = TypeRepr.of[T].typeSymbol
-      val sym = typeSymbol
-        .methodMember(methodName)
-        .headOption
-        .getOrElse(report.errorAndAbort(s"Could not find `$methodName` method on ${typeSymbol.name}"))
-
-      val sel = Select(obj, sym)
-
-      // Check if method expects empty parens: def foo() vs def foo
-      if (sym.paramSymss.headOption.contains(Nil)) {
-        Apply(sel, Nil) // foo()
-      } else {
-        sel // foo
-      }
-    }
 
     // --- Helper: Call a method, handling () vs no-args automatically ---
     def call(obj: Term, methodName: String): Term = {
@@ -73,7 +111,7 @@ object IterableUtils {
 
     // 2. Create Iterator Variable: "val it = target.iterator"
     // We must bind this to a val, otherwise 'target.iterator' would reset every loop.
-    val iteratorTerm = callTyped[CC](target, "iterator")
+    val iteratorTerm = call(target, "iterator")
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
       iteratorName,
@@ -107,7 +145,7 @@ object IterableUtils {
       val userCode =
         itemType.asType match {
           case '[t] =>
-            onItem[t](Ref(itemSym))
+            onItem(Ref(itemSym))
         }
 
       // D. Block(val x = ..., userCode, ())
