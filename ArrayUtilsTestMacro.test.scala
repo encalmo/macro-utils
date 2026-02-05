@@ -64,7 +64,7 @@ object ArrayUtilsTestMacro {
     }
 
     val result = cache.asTerm
-    report.warning(result.show(using Printer.TreeCode))
+    // report.warning(result.show(using Printer.TreeCode))
     result.asExprOf[Array[A]]
   }
 }

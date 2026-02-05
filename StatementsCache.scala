@@ -410,7 +410,7 @@ object StatementsCache {
     cache.put(statement)
   }
 
-  def unit(using cache: StatementsCache)(value: String): cache.quotes.reflect.Literal = {
+  def unit(using cache: StatementsCache): cache.quotes.reflect.Literal = {
     cache.unit
   }
 
