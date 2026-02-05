@@ -57,9 +57,9 @@ object IterableUtils {
 
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
-      iteratorName,
+      iteratorName + "Iterator",
       iteratorType,
-      Flags.Mutable,
+      Flags.EmptyFlags,
       Symbol.noSymbol
     )
     val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))
@@ -67,6 +67,7 @@ object IterableUtils {
 
     // 4. Build Loop Condition: it.hasNext
     val condition = Select(iteratorRef, hasNextSym)
+    val valueName = TypeNameUtils.valueNameOf(tpe)
 
     // 5. Build Loop Body
     val loopBody = {
@@ -75,7 +76,7 @@ object IterableUtils {
 
       val itemSym = Symbol.newVal(
         Symbol.spliceOwner,
-        "x",
+        valueName + "Item",
         itemType,
         Flags.EmptyFlags,
         Symbol.noSymbol
@@ -137,7 +138,7 @@ object IterableUtils {
     val iteratorTerm = call(target, "iterator")
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
-      iteratorName,
+      iteratorName + "Iterator",
       iteratorTerm.tpe.widen,
       Flags.EmptyFlags,
       Symbol.noSymbol
@@ -157,7 +158,7 @@ object IterableUtils {
       // B. Bind result to 'x' (so user logic can reference it safely)
       val itemSym = Symbol.newVal(
         Symbol.spliceOwner,
-        valueName,
+        valueName + "Item",
         itemType,
         Flags.EmptyFlags,
         Symbol.noSymbol
