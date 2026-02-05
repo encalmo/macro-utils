@@ -4,6 +4,18 @@ import scala.quoted.*
 
 object SelectableUtils {
 
+  object TypeReprIsSelectable {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Option[quotes.reflect.TypeRepr] = {
+      import quotes.reflect.*
+      val tped = tpe.dealias
+      if (tped <:< TypeRepr.of[Selectable]) {
+        findFieldsType(tped)
+      } else {
+        None
+      }
+    }
+  }
+
   /** Find the tuple type of the fields of a Selectable. */
   def findFieldsType(using Quotes)(tpe: quotes.reflect.TypeRepr): Option[quotes.reflect.TypeRepr] =
     import quotes.reflect.*
@@ -86,22 +98,19 @@ object SelectableUtils {
   }
 
   /** Check if a type is a Selectable and eventually apply a function using a statements cache. */
-  def maybeVisitSelectable[T: Type](using
+  def maybeVisitSelectable(using
       cache: StatementsCache
   )(
-      functionExpr: [Fields: Type] => StatementsCache ?=> Unit
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionWhenSelectable: cache.quotes.reflect.TypeRepr => Unit
   ): Option[Unit] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val tpe = TypeRepr.of[T].dealias
-    if (tpe <:< TypeRepr.of[Selectable]) {
-      findFieldsType(tpe)
-        .foreach { fieldsType =>
-          fieldsType.asType match {
-            case '[fields] => functionExpr.apply[fields]
-          }
-        }
+    val tped = tpe.dealias
+    if (tped <:< TypeRepr.of[Selectable]) {
+      findFieldsType(tped)
+        .foreach { fieldsType => functionWhenSelectable(fieldsType) }
       Some(())
     } else {
       None
@@ -109,39 +118,36 @@ object SelectableUtils {
   }
 
   /** Visit the fields of a Selectable and apply a function to each field using a statements cache. */
-  def visitFields[In: Type, Fields: Type](using
+  def visitFields(using
       cache: StatementsCache
   )(
-      valueExpr: Expr[In],
-      functionExpr: [A: Type] => (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
+      fieldsTpe: cache.quotes.reflect.TypeRepr,
+      valueTerm: cache.quotes.reflect.Term,
+      functionOnField: (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    TypeRepr.of[Fields].dealias match {
+    fieldsTpe.dealias match {
       case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
 
-        val term = valueExpr.asTerm
-        val selectDynamicSym = term.tpe.typeSymbol
+        val selectDynamicSym = valueTerm.tpe.typeSymbol
           .methodMember("selectDynamic")
           .headOption
-          .getOrElse(report.errorAndAbort(s"Method selectDynamic not found on ${term.tpe.show}"))
+          .getOrElse(report.errorAndAbort(s"Method selectDynamic not found on ${valueTerm.tpe.show}"))
 
         nameTypeList
           .zip(valueTypeList)
           .zipWithIndex
           .map { case ((nameType, valueTpe), index) =>
             val name = TypeNameUtils.shortBaseName(nameType.show(using Printer.TypeReprShortCode))
-            valueTpe.asType match {
-              case '[value] =>
-                functionExpr.apply[value](
-                  valueTpe,
-                  name, {
-                    val arg = Literal(StringConstant(name))
-                    Apply(Select(term, selectDynamicSym), List(arg))
-                  }
-                )
-            }
+            functionOnField(
+              valueTpe,
+              name, {
+                val arg = Literal(StringConstant(name))
+                Apply(Select(valueTerm, selectDynamicSym), List(arg))
+              }
+            )
           }
 
       case _ =>

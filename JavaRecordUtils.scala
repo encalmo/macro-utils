@@ -4,6 +4,14 @@ import scala.quoted.*
 
 object JavaRecordUtils {
 
+  object TypeReprIsJavaRecord {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
+      import quotes.reflect.*
+      val recordType = TypeRepr.typeConstructorOf(classOf[java.lang.Record])
+      tpe.dealias <:< recordType
+    }
+  }
+
   def isJavaRecord[A: Type](using Quotes): Boolean = {
     import quotes.reflect.*
     val recordType = TypeRepr.typeConstructorOf(classOf[java.lang.Record])
@@ -76,17 +84,17 @@ object JavaRecordUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](using
+  def visit(using
       cache: StatementsCache
   )(
       label: String,
+      tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => (String, cache.quotes.reflect.Term) => Unit
+      functionOnField: (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val tpe = TypeRepr.of[In]
     val sym = tpe.typeSymbol
     val recordType = TypeRepr.typeConstructorOf(classOf[java.lang.Record])
 
@@ -121,7 +129,7 @@ object JavaRecordUtils {
         returnType.asType match {
           case '[t] =>
             val valueAccess = Apply(Select(valueTerm, accessorMethod), Nil)
-            functionExpr.apply[t](name, valueAccess)
+            functionOnField(returnType, name, valueAccess)
         }
       }
     }

@@ -5,15 +5,20 @@ import scala.deriving.Mirror
 
 object TypeUtils {
 
+  def underlyingTypeRepr[A: Type](using
+      Quotes
+  ): Either[quotes.reflect.TypeRepr, quotes.reflect.TypeRepr] =
+    import quotes.reflect.*
+    underlyingTypeRepr(TypeRepr.of[A])
+
   /** Simplify a type to its underlying type, use dealias and tree matching to handle opaque types. Returns a Left of an
     * upper bound of the opaque type if not Any, otherwise a Right containing dealiased type.
     */
-  def underlyingTypeRepr[A: Type](using
+  def underlyingTypeRepr(using
       Quotes
-  ): Either[quotes.reflect.TypeRepr, quotes.reflect.TypeRepr] = {
+  )(tpe: quotes.reflect.TypeRepr): Either[quotes.reflect.TypeRepr, quotes.reflect.TypeRepr] = {
     import quotes.reflect.*
-    val tpe = TypeRepr.of[A].dealias
-    tpe match {
+    tpe.dealias match {
       case _: OrType => Right(tpe) // already a union type
       case _         =>
         val sym = tpe.typeSymbol
@@ -48,12 +53,13 @@ object TypeUtils {
   def inspectUnionImpl[A: Type](using
       Quotes
   ): Expr[List[String]] = {
-    Expr((inspectUnionType[A].getOrElse(Nil).map(_.show)).toList)
+    import quotes.reflect.*
+    Expr((inspectUnionType(TypeRepr.of[A]).getOrElse(Nil).map(_.show)).toList)
   }
 
-  def inspectUnionType[A: Type](using
+  def inspectUnionType(using
       Quotes
-  ): Option[List[quotes.reflect.TypeRepr]] = {
+  )(tpe: quotes.reflect.TypeRepr): Option[List[quotes.reflect.TypeRepr]] = {
     import quotes.reflect.*
 
     // Helper to recursively flatten "A | B | C" into List(A, B, C)
@@ -62,9 +68,8 @@ object TypeUtils {
       case other               => List(other)
     }
 
-    val tpe = TypeRepr.of[A].dealias
-    tpe match {
-      case OrType(_, _) => Some(flatten(tpe).distinct)
+    tpe.dealias match {
+      case OrType(_, _) => Some(flatten(tpe.dealias).distinct)
       case _            => None
     }
   }

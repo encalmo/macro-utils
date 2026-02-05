@@ -66,42 +66,48 @@ object TupleUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    visit[A](
-      Some("tuple"),
-      valueExpr.asTerm,
-      functionWhenTupleExpr = { [A: Type] => (tpe, name, value, index) =>
-        {
-          cache.put {
-            val messageTerm = StringUtils.concat(
-              Literal(StringConstant("tuple element at ")),
-              Literal(IntConstant(index)),
-              Literal(StringConstant(": ")),
-              Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
-              Literal(StringConstant(" = ")),
-              StringUtils.applyToString(value)
-            )
-            MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-          }
-        }
-      },
-      functionWhenNamedTupleExpr = { [A: Type] => (tpe, name, value, index) =>
-        {
-          cache.put {
-            val messageTerm = StringUtils.concat(
-              Literal(StringConstant("named tuple element ")),
-              Literal(StringConstant(name.getOrElse("unknown"))),
-              Literal(StringConstant(": ")),
-              Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
-              Literal(StringConstant(" = ")),
-              StringUtils.applyToString(value)
-            )
-            MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-          }
-        }
-      },
-      onStart = '{}.asTerm,
-      onEnd = '{}.asTerm
-    )
+    TypeRepr.of[A] match {
+      case TypeReprIsTuple() =>
+
+        visit(
+          Some("tuple"),
+          TypeRepr.of[A],
+          valueExpr.asTerm,
+          functionWhenTuple = { (tpe, name, value, index) =>
+            {
+              cache.put {
+                val messageTerm = StringUtils.concat(
+                  Literal(StringConstant("tuple element at ")),
+                  Literal(IntConstant(index)),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                  Literal(StringConstant(" = ")),
+                  StringUtils.applyToString(value)
+                )
+                MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+              }
+            }
+          },
+          functionWhenNamedTuple = { (tpe, name, value, index) =>
+            {
+              cache.put {
+                val messageTerm = StringUtils.concat(
+                  Literal(StringConstant("named tuple element ")),
+                  Literal(StringConstant(name.getOrElse("unknown"))),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                  Literal(StringConstant(" = ")),
+                  StringUtils.applyToString(value)
+                )
+                MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+              }
+            }
+          },
+          onStart = '{}.asTerm,
+          onEnd = '{}.asTerm
+        )
+    }
+
     cache.getBlockExprOf(
       MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
     )

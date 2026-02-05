@@ -50,27 +50,31 @@ object EnumUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    cache.put(
-      transformToMatchTerm[A](
-        valueExpr.asTerm,
-        functionWhenCaseValueExpr = { [A: Type] => (tpe, name, value, annotations) =>
-          StringUtils.concat(
-            Literal(StringConstant("case ")),
-            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
-            Literal(StringConstant(" => ")),
-            value
+    TypeRepr.of[A] match {
+      case TypeReprIsEnum() =>
+        cache.put(
+          transformToMatchTerm(
+            TypeRepr.of[A],
+            valueExpr.asTerm,
+            functionWhenCaseValue = { (tpe, name, value, annotations) =>
+              StringUtils.concat(
+                Literal(StringConstant("case ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                Literal(StringConstant(" => ")),
+                value
+              )
+            },
+            functionWhenCaseClass = { (tpe, name, value, annotations) =>
+              StringUtils.concat(
+                Literal(StringConstant("case _: ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                Literal(StringConstant(" => ")),
+                value
+              )
+            }
           )
-        },
-        functionWhenCaseClassExpr = { [A: Type] => (tpe, name, value, annotations) =>
-          StringUtils.concat(
-            Literal(StringConstant("case _: ")),
-            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
-            Literal(StringConstant(" => ")),
-            value
-          )
-        }
-      )
-    )
+        )
+    }
 
     cache.getBlockExprOf[String]
   }

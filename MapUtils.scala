@@ -4,19 +4,49 @@ import scala.quoted.*
 
 object MapUtils {
 
-  def buildMapLoop[K: Type, V: Type](using
+  object TypeReprIsMap {
+    def unapply(using
+        Quotes
+    )(tpe: quotes.reflect.TypeRepr): Option[(quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] = {
+      import quotes.reflect.*
+      // 1. Resolve the Map symbol
+      // We use "scala.collection.Map" to cover both mutable and immutable maps
+      val mapSym = Symbol.requiredClass("scala.collection.Map")
+      // 2. Check if the type is a subtype of Map
+      if (tpe.derivesFrom(mapSym)) {
+        // 3. Upcast to Map[K, V] to get the specific type arguments
+        val base = tpe.baseType(mapSym)
+        base match {
+          // 4. Extract Key and Value
+          case AppliedType(_, List(keyType, valueType)) =>
+            Some((keyType, valueType))
+
+          // Edge case: Raw Map (Map[?, ?]) or errors
+          case _ =>
+            Some((TypeRepr.of[Any], TypeRepr.of[Any]))
+        }
+      } else {
+        None
+      }
+    }
+  }
+
+  def buildMapLoop(using
       cache: StatementsCache
   )(
       iteratorName: String,
+      keyTpe: cache.quotes.reflect.TypeRepr,
+      valueTpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      onItem: [K: Type, V: Type] => (cache.quotes.reflect.Term, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionOnEntry: (
+          cache.quotes.reflect.Term,
+          cache.quotes.reflect.Term
+      ) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val tupleType = TypeRepr.of[(K, V)]
-    val keyType = TypeRepr.of[K]
-    val valueType = TypeRepr.of[V]
+    val tupleType = TypeRepr.of[Tuple2].appliedTo(List(keyTpe, valueTpe)) // (K, V)
 
     // FIX 1: Explicitly resolve Tuple2 symbols using caseFields
     // Tuple2 is a case class, so caseFields returns List(_1, _2)
@@ -61,24 +91,17 @@ object MapUtils {
       val pairRef = Ref(pairSym)
 
       // B. val key = pair._1
-      val keySym = Symbol.newVal(Symbol.spliceOwner, "key", keyType, Flags.EmptyFlags, Symbol.noSymbol)
+      val keySym = Symbol.newVal(Symbol.spliceOwner, "key", keyTpe, Flags.EmptyFlags, Symbol.noSymbol)
       // FIX 2: Use the resolved _1Sym
       val keyValDef = ValDef(keySym, Some(Select(pairRef, _1Sym)))
 
       // C. val value = pair._2
-      val valueSym = Symbol.newVal(Symbol.spliceOwner, "value", valueType, Flags.EmptyFlags, Symbol.noSymbol)
+      val valueSym = Symbol.newVal(Symbol.spliceOwner, "value", valueTpe, Flags.EmptyFlags, Symbol.noSymbol)
       // FIX 3: Use the resolved _2Sym
       val valueValDef = ValDef(valueSym, Some(Select(pairRef, _2Sym)))
 
       // D. Generate User Code: onItem(key, value)
-      val userCode =
-        keyType.asType match {
-          case '[k] =>
-            valueType.asType match {
-              case '[v] =>
-                onItem[k, v](Ref(keySym), Ref(valueSym))
-            }
-        }
+      val userCode = functionOnEntry(Ref(keySym), Ref(valueSym))
 
       Block(
         List(pairValDef, keyValDef, valueValDef, userCode),

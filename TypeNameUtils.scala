@@ -27,12 +27,17 @@ object TypeNameUtils {
   transparent inline def typeName[A] = ${ typeNameExpr[A] }
   def typeNameExpr[A: Type](using Quotes): Expr[String] =
     import quotes.reflect.*
-    val name = TypeRepr.of[A].dealias.show(using Printer.TypeReprShortCode)
+    val name = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
     Expr(shortBaseName(name))
 
   def typeNameOf[A: Type](using Quotes): String =
     import quotes.reflect.*
-    val name = TypeRepr.of[A].dealias.show(using Printer.TypeReprShortCode)
+    val name = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
+    shortBaseName(name)
+
+  def typeNameOf(using Quotes)(tpe: quotes.reflect.TypeRepr): String =
+    import quotes.reflect.*
+    val name = tpe.show(using Printer.TypeReprShortCode)
     shortBaseName(name)
 
   inline def typeNames[A]: Tuple = ${ typeNamesExpr[A] }
@@ -49,12 +54,17 @@ object TypeNameUtils {
   transparent inline def valueName[A] = ${ valueNameExpr[A] }
   def valueNameExpr[A: Type](using Quotes): Expr[String] =
     import quotes.reflect.*
-    val name = TypeRepr.of[A].dealias.show(using Printer.TypeReprShortCode)
+    val name = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
     Expr(toValueName(name))
 
   def valueNameOf[A: Type](using Quotes): String =
     import quotes.reflect.*
-    val name = TypeRepr.of[A].dealias.show(using Printer.TypeReprShortCode)
+    val name = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
+    toValueName(name)
+
+  def valueNameOf(using Quotes)(tpe: quotes.reflect.TypeRepr): String =
+    import quotes.reflect.*
+    val name = tpe.show(using Printer.TypeReprShortCode)
     toValueName(name)
 
 }

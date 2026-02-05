@@ -6,6 +6,16 @@ import org.encalmo.utils.AnnotationUtils.computeInfo
 
 object EnumUtils {
 
+  /** Check if a type is a Scala3 enum or a sealed abstract type, or a Java enum. */
+  object TypeReprIsEnum {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
+      import quotes.reflect.*
+      val flags = tpe.dealias.typeSymbol.flags
+      (flags.is(Flags.Sealed) && (flags.is(Flags.Trait) || flags.is(Flags.Abstract)))
+      || (flags.is(Flags.JavaDefined) && flags.is(Flags.Enum))
+    }
+  }
+
   /** Check if a type is an enum or a sealed abstract type. */
   def isEnumOrSealedADT[A: Type](using Quotes): Boolean = {
     import quotes.reflect.*
@@ -128,17 +138,18 @@ object EnumUtils {
     * @return
     *   Unit
     */
-  def transformToMatchTerm[In: Type](using
+  def transformToMatchTerm(using
       cache: StatementsCache
   )(
+      tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionWhenCaseValueExpr: [A: Type] => (
+      functionWhenCaseValue: (
           cache.quotes.reflect.TypeRepr,
           String,
           cache.quotes.reflect.Term,
           Set[AnnotationInfo]
       ) => cache.quotes.reflect.Term,
-      functionWhenCaseClassExpr: [A: Type] => (
+      functionWhenCaseClass: (
           cache.quotes.reflect.TypeRepr,
           String,
           cache.quotes.reflect.Term,
@@ -148,7 +159,7 @@ object EnumUtils {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val enumType = TypeRepr.of[In].dealias
+    val enumType = tpe.dealias
     val enumSymbol = enumType.typeSymbol
     val enumCompanion = enumSymbol.companionModule
 
@@ -201,14 +212,14 @@ object EnumUtils {
               case '[t] =>
                 if (enumCase.isTerm)
                 then
-                  functionWhenCaseValueExpr.apply[t](
+                  functionWhenCaseValue(
                     tpe,
                     enumCase.name,
                     valueTerm,
                     enumCaseSymbol.annotations.computeInfo
                   )
                 else
-                  functionWhenCaseClassExpr.apply[t](
+                  functionWhenCaseClass(
                     tpe,
                     enumCase.name,
                     valueTerm,
@@ -220,7 +231,7 @@ object EnumUtils {
         }
 
       Match(valueTerm, matchCaseDefs)
-    } else report.errorAndAbort(s"The type ${TypeRepr.of[In].show} is not an enum or sealed ADT")
+    } else report.errorAndAbort(s"The type ${tpe.show} is not an enum or sealed ADT")
   }
 
 }

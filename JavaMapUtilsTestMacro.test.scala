@@ -1,36 +1,35 @@
 package org.encalmo.utils
 
-import MapUtils.*
-
 import scala.quoted.*
 
-object MapUtilsTestMacro {
+import JavaMapUtils.*
 
-  inline def testBuildMapLoop[K, V](value: Map[K, V]): String = {
-    ${ testBuildMapLoopImpl[K, V]('{ value }) }
+object JavaMapUtilsTestMacro {
+
+  inline def testMaybeVisitJavaMap[K, V](inline value: java.util.Map[K, V]): String = {
+    ${ testMaybeVisitJavaMapImpl[K, V]('{ value }) }
   }
 
-  def testBuildMapLoopImpl[K: Type, V: Type](valueExpr: Expr[Map[K, V]])(using Quotes): Expr[String] = {
+  def testMaybeVisitJavaMapImpl[K: Type, V: Type](valueExpr: Expr[java.util.Map[K, V]])(using Quotes): Expr[String] = {
     given cache: StatementsCache = new StatementsCache
-    testBuildMapLoop2Impl[K, V](valueExpr)
+    testMaybeVisitJavaMap2Impl[K, V](valueExpr)
   }
 
-  def testBuildMapLoop2Impl[K: Type, V: Type](using
-      cache: StatementsCache
-  )(valueExpr: Expr[Map[K, V]]): Expr[String] = {
+  def testMaybeVisitJavaMap2Impl[K: Type, V: Type](
+      valueExpr: Expr[java.util.Map[K, V]]
+  )(using cache: StatementsCache): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    TypeRepr.of[Map[K, V]] match {
-      case TypeReprIsMap(keyTpe, valueTpe) =>
-
-        cache.put {
+    TypeRepr.of[java.util.Map[K, V]] match {
+      case TypeReprIsJavaMap(keyTpe, valueTpe) =>
+        cache.put(
           buildMapLoop(
-            "testIterator",
-            TypeRepr.of[K],
-            TypeRepr.of[V],
+            TypeNameUtils.valueNameOf(keyTpe),
+            keyTpe,
+            valueTpe,
             valueExpr.asTerm,
             functionOnEntry = { (key, value) =>
               bufferRef.methodCall(
@@ -45,7 +44,7 @@ object MapUtilsTestMacro {
               )
             }
           )
-        }
+        )
     }
 
     cache.put {

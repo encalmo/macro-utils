@@ -4,6 +4,22 @@ import scala.quoted.*
 
 object UnionUtils {
 
+  object TypeReprIsUnion {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Option[List[quotes.reflect.TypeRepr]] = {
+      import quotes.reflect.*
+      // Helper to recursively flatten "A | B | C" into List(A, B, C)
+      def flatten(tpe: TypeRepr): List[TypeRepr] = tpe.dealias match {
+        case OrType(left, right) => flatten(left) ++ flatten(right)
+        case other               => List(other)
+      }
+
+      tpe.dealias match {
+        case OrType(_, _) => Some(flatten(tpe.dealias).distinct)
+        case _            => None
+      }
+    }
+  }
+
   /** Check if a type is a union. */
   def isUnion[A: Type](using Quotes): Boolean = {
     import quotes.reflect.*
@@ -30,7 +46,7 @@ object UnionUtils {
 
     val matchCaseDefs =
       TypeUtils
-        .inspectUnionType[In]
+        .inspectUnionType(TypeRepr.of[In])
         .getOrElse(Nil)
         .map { tpe =>
           val typeTree = tpe.asType match {
@@ -62,31 +78,29 @@ object UnionUtils {
     */
   def transformToMatchTerm(using
       cache: StatementsCache
-  )[In: Type](
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionOnCase: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
     val matchCaseDefs =
       TypeUtils
-        .inspectUnionType[In]
+        .inspectUnionType(tpe)
         .getOrElse(Nil)
         .map { tpe =>
-          tpe.asType match {
-            case '[t] =>
-              val bindSym = Symbol.newBind(
-                Symbol.spliceOwner,
-                TypeNameUtils.valueNameOf[t],
-                Flags.EmptyFlags,
-                tpe
-              )
-              val typeCheckPattern = Typed(Wildcard(), TypeTree.of[t])
-              val matchCasePattern = Bind(bindSym, typeCheckPattern)
-              val matchCaseBody = functionExpr.apply[t](tpe, Ref(bindSym))
-              CaseDef(matchCasePattern, None, matchCaseBody)
-          }
+          val bindSym = Symbol.newBind(
+            Symbol.spliceOwner,
+            TypeNameUtils.valueNameOf(tpe),
+            Flags.EmptyFlags,
+            tpe
+          )
+          val typeCheckPattern = Typed(Wildcard(), Inferred(tpe))
+          val matchCasePattern = Bind(bindSym, typeCheckPattern)
+          val matchCaseBody = functionOnCase(tpe, Ref(bindSym))
+          CaseDef(matchCasePattern, None, matchCaseBody)
         }
 
     Match(valueTerm, matchCaseDefs)

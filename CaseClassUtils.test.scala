@@ -4,7 +4,9 @@ import CaseClassUtilsTestMacro.*
 
 class CaseClassUtilsSpec extends munit.FunSuite {
 
-  case class Entity(name: String, age: Int, emails: List[String])
+  case class foo(name: String) extends scala.annotation.StaticAnnotation
+
+  case class Entity(name: String, @foo("bar") age: Int, emails: List[String])
   val entity = Entity("John Doe", 30, List("john.doe@example.com", "jane.doe@example.com"))
 
   test("visit a case class") {
@@ -12,7 +14,7 @@ class CaseClassUtilsSpec extends munit.FunSuite {
       testVisitMethod(entity),
       List(
         "name: String = John Doe",
-        "age: Int = 30",
+        "@foo(name=bar)age: Int = 30",
         "emails: List[String] = List(john.doe@example.com, jane.doe@example.com)"
       )
     )

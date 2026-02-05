@@ -44,22 +44,28 @@ object JavaRecordUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    visit[A](
-      "java record",
-      valueExpr.asTerm,
-      functionExpr = { [A: Type] => (name, value) =>
-        cache.put {
-          val messageTerm = StringUtils.concat(
-            Literal(StringConstant(name)),
-            Literal(StringConstant(": ")),
-            Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
-            Literal(StringConstant(" = ")),
-            StringUtils.applyToString(value)
-          )
-          MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-        }
-      }
-    )
+    TypeRepr.of[A] match {
+      case TypeReprIsJavaRecord() =>
+
+        visit(
+          "java record",
+          TypeRepr.of[A],
+          valueExpr.asTerm,
+          functionOnField = { (tpe, name, value) =>
+            cache.put {
+              val messageTerm = StringUtils.concat(
+                Literal(StringConstant(name)),
+                Literal(StringConstant(": ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                Literal(StringConstant(" = ")),
+                StringUtils.applyToString(value)
+              )
+              MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+            }
+          }
+        )
+    }
+
     cache.getBlockExprOf(
       bufferRef
         .methodCall("toList", Nil)

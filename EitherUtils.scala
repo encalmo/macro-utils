@@ -4,12 +4,36 @@ import scala.quoted.*
 
 object EitherUtils {
 
-  def buildMatchTerm[L: Type, R: Type](using
+  object TypeReprIsEither {
+    def unapply(using
+        Quotes
+    )(tpe: quotes.reflect.TypeRepr): Option[(quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] = {
+      import quotes.reflect.*
+      val eitherSym = Symbol.requiredClass("scala.util.Either")
+      // 1. Check inheritance
+      if (tpe.derivesFrom(eitherSym)) {
+        // 2. Upcast to Either[L, R] to resolve type arguments safely
+        val base = tpe.baseType(eitherSym)
+        base match {
+          case AppliedType(_, List(left, right)) =>
+            Some((left, right))
+          case _ =>
+            None
+        }
+      } else {
+        None
+      }
+    }
+  }
+
+  def buildMatchTerm(using
       cache: StatementsCache
   )(
+      leftTpe: cache.quotes.reflect.TypeRepr,
+      rightTpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      onLeft: [B: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term,
-      onRight: [C: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
+      functionOnLeft: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term,
+      functionOnRight: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Match = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -18,21 +42,17 @@ object EitherUtils {
     val leftClassSym = Symbol.requiredClass("scala.util.Left")
     val rightClassSym = Symbol.requiredClass("scala.util.Right")
 
-    // 2. Extract Types L and R from Either[L, R]
-    val leftTypeArg = TypeRepr.of[L]
-    val rightTypeArg = TypeRepr.of[R]
-
     // --- Helper to build a case: case temp: Class[L, R] => handler(temp.value) ---
-    def buildCase[T: Type](
+    def buildCase(
         classSym: Symbol,
         tpeArgs: List[TypeRepr],
-        handler: [T: Type] => Term => Term
+        handler: (TypeRepr, Term) => Term
     ): CaseDef = {
       // A. Construct the specific type: Left[L, R] or Right[L, R]
       val caseType = TypeIdent(classSym).tpe.appliedTo(tpeArgs)
 
       // B. Create Bind Symbol 'temp'
-      val tempSym = Symbol.newBind(Symbol.spliceOwner, TypeNameUtils.valueNameOf[T], Flags.EmptyFlags, caseType)
+      val tempSym = Symbol.newBind(Symbol.spliceOwner, TypeNameUtils.valueNameOf(caseType), Flags.EmptyFlags, caseType)
 
       // C. Create Pattern: temp @ (_ : CaseType)
       val typeCheckPattern = Typed(Wildcard(), Inferred(caseType))
@@ -44,24 +64,15 @@ object EitherUtils {
       val extractedValue = Select(Ref(tempSym), valueSym)
 
       // E. Return the CaseDef
-      CaseDef(bindPattern, None, handler[T](extractedValue))
+      CaseDef(bindPattern, None, handler(caseType, extractedValue))
     }
 
     // 3. Build the two cases
     // Note: We must pass BOTH [L, R] to Left and Right types, not just one.
     // Left[String, Int] and Right[String, Int] are the valid subtypes of Either[String, Int].
-    val typeArgs = List(leftTypeArg, rightTypeArg)
-
-    val caseLeft =
-      leftTypeArg.asType match {
-        case '[l] =>
-          buildCase[l](leftClassSym, typeArgs, onLeft)
-      }
-    val caseRight =
-      rightTypeArg.asType match {
-        case '[r] =>
-          buildCase[r](rightClassSym, typeArgs, onRight)
-      }
+    val typeArgs = List(leftTpe, rightTpe)
+    val caseLeft = buildCase(leftClassSym, typeArgs, functionOnLeft)
+    val caseRight = buildCase(rightClassSym, typeArgs, functionOnRight)
 
     // 4. Construct Match
     Match(target, List(caseLeft, caseRight))

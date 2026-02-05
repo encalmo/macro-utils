@@ -27,22 +27,29 @@ object CaseClassUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    visit[A](
-      valueExpr.asTerm,
-      { [A: Type] => (tpe, name, value, annotations) =>
-        cache.put {
-          val messageTerm =
-            StringUtils.concat(
-              Literal(StringConstant(name)),
-              Literal(StringConstant(": ")),
-              Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
-              Literal(StringConstant(" = ")),
-              StringUtils.applyToString(value)
-            )
-          MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-        }
-      }
-    )
+    TypeRepr.of[A] match {
+      case TypeReprIsCaseClass() =>
+        visit(
+          TypeRepr.of[A],
+          valueExpr.asTerm,
+          { (tpe, name, value, annotations) =>
+            cache.put {
+              val messageTerm =
+                StringUtils.concat(
+                  Literal(StringConstant(annotations.map(_.toString).mkString(", "))),
+                  Literal(StringConstant(name)),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                  Literal(StringConstant(" = ")),
+                  StringUtils.applyToString(value)
+                )
+              MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+            }
+          }
+        )
+      case _ =>
+        '{}
+    }
 
     cache.getBlockExprOf(
       bufferRef.methodCall("toList", Nil).asExprOf[List[String]]
@@ -91,17 +98,17 @@ object CaseClassUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    CaseClassUtils.visit[T](using cache)(
+    CaseClassUtils.visit(using cache)(
+      TypeRepr.of[T],
       valueExpr.asTerm,
-      [A: Type] =>
-        (tpe, name, value, annotations) =>
-          val term =
-            MethodUtils.callPrintln(using cache)(
-              Literal(StringConstant(name)),
-              Literal(StringConstant(": ")),
-              StringUtils.applyToString(value)
-            )
-          cache.put(term)
+      (tpe, name, value, annotations) =>
+        val term =
+          MethodUtils.callPrintln(using cache)(
+            Literal(StringConstant(name)),
+            Literal(StringConstant(": ")),
+            StringUtils.applyToString(value)
+          )
+        cache.put(term)
     )
     cache.getBlockExprOfUnit
   }

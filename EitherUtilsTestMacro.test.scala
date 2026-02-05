@@ -20,26 +20,31 @@ object EitherUtilsTestMacro {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    cache.put {
-      buildMatchTerm[L, R](
-        valueExpr.asTerm,
-        onLeft = { [B: Type] => term =>
-          StringUtils
-            .concat(
-              Literal(StringConstant("Left(")),
-              StringUtils.applyToString(term),
-              Literal(StringConstant(")"))
-            )
-        },
-        onRight = { [C: Type] => term =>
-          StringUtils
-            .concat(
-              Literal(StringConstant("Right(")),
-              StringUtils.applyToString(term),
-              Literal(StringConstant(")"))
-            )
+    TypeRepr.of[Either[L, R]] match {
+      case TypeReprIsEither(leftTpe, rightTpe) =>
+        cache.put {
+          buildMatchTerm(
+            leftTpe,
+            rightTpe,
+            valueExpr.asTerm,
+            functionOnLeft = { (tpe, term) =>
+              StringUtils
+                .concat(
+                  Literal(StringConstant("Left(")),
+                  StringUtils.applyToString(term),
+                  Literal(StringConstant(")"))
+                )
+            },
+            functionOnRight = { (tpe, term) =>
+              StringUtils
+                .concat(
+                  Literal(StringConstant("Right(")),
+                  StringUtils.applyToString(term),
+                  Literal(StringConstant(")"))
+                )
+            }
+          )
         }
-      )
     }
     val result = cache.asTerm
     // report.warning(result.show(using Printer.TreeCode))

@@ -17,13 +17,21 @@ object OptionUtilsTestMacro {
   def testBuildMatchTerm2Impl[A: Type](using cache: StatementsCache)(valueExpr: Expr[Option[A]]): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    cache.put {
-      buildMatchTerm[A](
-        valueExpr.asTerm,
-        onSome = { [B: Type] => term => StringUtils.applyToString(term) },
-        onNone = { Literal(StringConstant("<none>")) }
-      )
+
+    TypeRepr.of[Option[A]] match {
+      case TypeReprIsOption(tpe) =>
+        cache.put {
+          buildMatchTerm(
+            tpe,
+            valueExpr.asTerm,
+            functionOnSome = { (tpe, term) => StringUtils.applyToString(term) },
+            functionOnNone = { Literal(StringConstant("<none>")) }
+          )
+        }
+      case _ =>
+        cache.put(Literal(StringConstant("not an Option type")))
     }
+
     val result = cache.asTerm
     // report.warning(result.show(using Printer.TreeCode))
     result.asExprOf[String]

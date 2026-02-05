@@ -45,18 +45,25 @@ object UnionUtilsTestMacro {
   )(using cache: StatementsCache): Expr[String] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    cache.put {
-      transformToMatchTerm[A](
-        valueExpr.asTerm,
-        functionExpr = { [A: Type] => (tpe, value) =>
-          StringUtils.concat(
-            Literal(StringConstant("case _: ")),
-            Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
-            Literal(StringConstant(" => ")),
-            value
+
+    TypeRepr.of[A] match {
+      case TypeReprIsUnion(tpes) =>
+        cache.put {
+          transformToMatchTerm(
+            TypeRepr.of[A],
+            valueExpr.asTerm,
+            functionOnCase = { (tpe, value) =>
+              StringUtils.concat(
+                Literal(StringConstant("case _: ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                Literal(StringConstant(" => ")),
+                value
+              )
+            }
           )
         }
-      )
+      case _ =>
+        cache.put(Literal(StringConstant("not an union type")))
     }
     val result = cache.asTerm
     // report.warning(result.show(using Printer.TreeCode))
@@ -80,14 +87,16 @@ object UnionUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    TupleUtils.visit[A](
+    TupleUtils.visit(
       label = Some("tuple"),
+      tpe = TypeRepr.of[A],
       valueTerm = valueExpr.asTerm,
-      functionWhenTupleExpr = { [A: Type] => (tpe, name, value, index) =>
+      functionWhenTuple = { (tpe, name, value, index) =>
         cache.put {
-          transformToMatchTerm[A](
+          transformToMatchTerm(
+            tpe,
             value,
-            functionExpr = { [B: Type] => (tpe, value) =>
+            functionOnCase = { (tpe, value) =>
               val messageTerm = StringUtils.concat(
                 Literal(StringConstant("case _: ")),
                 Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
@@ -99,11 +108,12 @@ object UnionUtilsTestMacro {
           )
         }
       },
-      functionWhenNamedTupleExpr = { [A: Type] => (tpe, name, value, index) =>
+      functionWhenNamedTuple = { (tpe, name, value, index) =>
         cache.put {
-          transformToMatchTerm[A](
+          transformToMatchTerm(
+            tpe,
             value,
-            functionExpr = { [A: Type] => (tpe, value) =>
+            functionOnCase = { (tpe, value) =>
               val messageTerm = StringUtils.concat(
                 Literal(StringConstant("named case " + name.getOrElse("unknown") + ": ")),
                 Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),

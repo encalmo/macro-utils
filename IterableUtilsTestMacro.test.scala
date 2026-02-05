@@ -25,26 +25,29 @@ object IterableUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    TupleUtils.visit[A](
+    TupleUtils.visit(
       label = Some("test"),
+      tpe = TypeRepr.of[A],
       valueTerm = valueTerm,
-      functionWhenTupleExpr = { [B: Type] => (tpe, name, value, index) =>
-        Type.of[B] match {
-          case '[Iterable[b]] =>
-            cache.put {
-              buildIterableLoop[b](
-                "testIterator_" + index,
-                value,
-                onItem = { [C: Type] => term =>
-                  bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
-                }
-              )
-            }
-          case _ => ()
-        }
+      functionWhenTuple = {
+        (tpe, name, value, index) =>
+          tpe match {
+            case TypeReprIsIterable(itemType) =>
+              cache.put {
+                buildIterableLoop(
+                  "testIterator_" + index,
+                  itemType,
+                  value,
+                  functionOnItem = { (tpe, term) =>
+                    bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+                  }
+                )
+              }
+          }
+
         '{}
       },
-      functionWhenNamedTupleExpr = { [A: Type] => (tpe, name, value, index) =>
+      functionWhenNamedTuple = { (tpe, name, value, index) =>
         '{}.asTerm
       },
       onStart = '{}.asTerm,
@@ -72,7 +75,8 @@ object IterableUtilsTestMacro {
   def testCreateStaticList2Impl(using cache: StatementsCache)(termExpr: Expr[String]): Expr[List[String]] = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
-    val result = createStaticList[String](termExpr.valueOrAbort.toList.map(c => Literal(StringConstant(c.toString))))
+    val result =
+      createStaticList(TypeRepr.of[String], termExpr.valueOrAbort.toList.map(c => Literal(StringConstant(c.toString))))
     // report.warning(result.show(using Printer.TreeCode))
     result.asExprOf[List[String]]
   }

@@ -6,6 +6,13 @@ import scala.deriving.Mirror
 
 object CaseClassUtils {
 
+  object TypeReprIsCaseClass {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
+      import quotes.reflect.*
+      tpe.dealias.typeSymbol.isClassDef && tpe.dealias.typeSymbol.flags.is(Flags.Case)
+    }
+  }
+
   /** Check if a type is a case class. */
   def isCaseClass[A: Type](using Quotes): Boolean = {
     import quotes.reflect.*
@@ -253,21 +260,22 @@ object CaseClassUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](using
+  def visit(using
       cache: StatementsCache
   )(
+      tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => (
-          cache.quotes.reflect.TypeRepr,
-          String, // name
-          cache.quotes.reflect.Term, // value
+      functionOnField: (
+          cache.quotes.reflect.TypeRepr, // type of the field
+          String, // name of the field
+          cache.quotes.reflect.Term, // value of the field
           Set[AnnotationInfo] // annotations
       ) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
     {
-      val parentTpe = TypeUtils.underlyingTypeRepr[In] match {
+      val parentTpe = TypeUtils.underlyingTypeRepr(tpe) match {
         case Left(tpe)  => tpe
         case Right(tpe) => tpe
       }
@@ -275,16 +283,13 @@ object CaseClassUtils {
         case '[p] =>
           parentTpe.typeSymbol.caseFields
             .map { caseField =>
-              val tpe = parentTpe.memberType(caseField).dealias
-              tpe.asType match {
-                case '[t] =>
-                  functionExpr.apply[t](
-                    tpe,
-                    caseField.name,
-                    Select(valueTerm, caseField),
-                    AnnotationUtils.computeFieldAnnotationsFromTpe(parentTpe, caseField.name)
-                  )
-              }
+              val tpe = parentTpe.memberType(caseField)
+              functionOnField.apply(
+                tpe,
+                caseField.name,
+                Select(valueTerm, caseField),
+                AnnotationUtils.computeFieldAnnotationsFromTpe(parentTpe, caseField.name)
+              )
             }
       }
     }

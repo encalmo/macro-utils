@@ -4,6 +4,24 @@ import scala.quoted.*
 
 object TupleUtils {
 
+  object TypeReprIsTuple {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
+      import quotes.reflect.*
+      // Check if the type derives from the core scala.Tuple trait.
+      // This covers:
+      // 1. Standard Tuples: (A, B) -> Tuple2[A, B]
+      // 2. Generic Tuples: A *: B *: EmptyTuple
+      // 3. Type aliases pointing to tuples
+      // 2. Named Tuples (Opaque Type)
+      // derivations don't see through opaque types, so we check explicitly.
+      tpe.derivesFrom(Symbol.requiredClass("scala.Tuple"))
+      || (tpe.dealias.asType match {
+        case '[NamedTuple.AnyNamedTuple] => true
+        case _                           => false
+      })
+    }
+  }
+
   def isTuple[A: Type](using Quotes): Boolean =
     Type.of[A] match {
       case '[head *: tail]        => true
@@ -147,18 +165,19 @@ object TupleUtils {
     * @return
     *   Unit
     */
-  def visit[In: Type](using
+  def visit(using
       cache: StatementsCache
   )(
       label: Option[String],
+      tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionWhenTupleExpr: [A: Type] => (
+      functionWhenTuple: (
           cache.quotes.reflect.TypeRepr,
           Option[String],
           cache.quotes.reflect.Term,
           Int
       ) => Unit,
-      functionWhenNamedTupleExpr: [A: Type] => (
+      functionWhenNamedTuple: (
           cache.quotes.reflect.TypeRepr,
           Option[String],
           cache.quotes.reflect.Term,
@@ -170,29 +189,25 @@ object TupleUtils {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    Type.of[In] match {
-
+    tpe.asType match {
       case '[NamedTuple.AnyNamedTuple] =>
         cache.put(onStart)
         val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
-        TypeRepr.of[In].dealias match {
+        tpe.dealias match {
           case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
             nameTypeList
               .zip(valueTypeList)
               .zipWithIndex
               .foreach { case ((nameTpe, valueTpe), index) =>
-                valueTpe.asType match {
-                  case '[value] =>
-                    functionWhenNamedTupleExpr.apply[value](
-                      valueTpe,
-                      Some(TypeNameUtils.shortBaseName(nameTpe.show(using Printer.TypeReprShortCode))),
-                      Apply(
-                        Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
-                        List(Literal(IntConstant(index)))
-                      ).callAsInstanceOf(Inferred(valueTpe)),
-                      index
-                    )
-                }
+                functionWhenNamedTuple(
+                  valueTpe,
+                  Some(TypeNameUtils.shortBaseName(nameTpe.show(using Printer.TypeReprShortCode))),
+                  Apply(
+                    Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
+                    List(Literal(IntConstant(index)))
+                  ).callAsInstanceOf(Inferred(valueTpe)),
+                  index
+                )
               }
           case _ => ()
         }
@@ -200,7 +215,7 @@ object TupleUtils {
 
       case '[head *: tail] =>
         val (headTpe, tailTpes) =
-          TypeRepr.of[In] match {
+          tpe match {
             // Case 1: Standard Tuple2, Tuple3, etc.
             // (Union, Union) is represented as AppliedType(Tuple2, List(Union, Union))
             case AppliedType(tpe, args) if tpe.typeSymbol.name.startsWith("Tuple") =>
@@ -216,7 +231,7 @@ object TupleUtils {
           }
 
         cache.put(onStart)
-        visitTuple[In](headTpe, tailTpes, label, valueTerm, functionWhenTupleExpr, 0)
+        visitTuple(tpe, headTpe, tailTpes, label, valueTerm, functionWhenTuple, 0)
         cache.put(onEnd)
 
       case '[scala.EmptyTuple] =>
@@ -232,14 +247,15 @@ object TupleUtils {
     }
   }
 
-  private def visitTuple[In: Type](using
+  private def visitTuple(using
       cache: StatementsCache
   )(
+      tpe: cache.quotes.reflect.TypeRepr,
       headTpe: cache.quotes.reflect.TypeRepr,
       tailTpes: List[cache.quotes.reflect.TypeRepr],
       label: Option[String],
       valueTerm: cache.quotes.reflect.Term,
-      functionExpr: [A: Type] => (
+      functionOnItem: (
           cache.quotes.reflect.TypeRepr,
           Option[String],
           cache.quotes.reflect.Term,
@@ -252,7 +268,7 @@ object TupleUtils {
 
     headTpe.asType match {
       case '[head] =>
-        functionExpr.apply[head](
+        functionOnItem(
           headTpe,
           label,
           valueTerm
@@ -264,12 +280,13 @@ object TupleUtils {
 
     tailTpes match {
       case headTpe2 :: tailTpes2 =>
-        visitTuple[In](
+        visitTuple(
+          tpe,
           headTpe2,
           tailTpes2,
           label,
           valueTerm,
-          functionExpr,
+          functionOnItem,
           n + 1
         )
       case Nil =>

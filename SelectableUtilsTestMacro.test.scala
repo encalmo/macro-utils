@@ -20,26 +20,33 @@ object SelectableUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    maybeVisitSelectable[T](
-      functionExpr = { [Fields: Type] => StatementsCache ?=>
-        visitFields[T, Fields](using cache)(
-          valueExpr,
-          functionExpr = { [A: Type] => (tpe, name, value) =>
-            cache.put {
-              val messageTerm =
-                StringUtils.concat(
-                  Literal(StringConstant(name)),
-                  Literal(StringConstant(": ")),
-                  Literal(StringConstant(TypeRepr.of[A].show(using Printer.TypeReprShortCode))),
-                  Literal(StringConstant(" = ")),
-                  StringUtils.applyToString(value)
-                )
-              MethodUtils.methodCall(using cache)(bufferRef, "append", List(messageTerm))
-            }
+    TypeRepr.of[T] match {
+      case TypeReprIsSelectable(fieldsTpe) =>
+
+        maybeVisitSelectable(
+          TypeRepr.of[T],
+          functionWhenSelectable = { fieldsTpe =>
+            visitFields(using cache)(
+              fieldsTpe,
+              valueExpr.asTerm,
+              functionOnField = { (tpe, name, value) =>
+                cache.put {
+                  val messageTerm =
+                    StringUtils.concat(
+                      Literal(StringConstant(name)),
+                      Literal(StringConstant(": ")),
+                      Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+                      Literal(StringConstant(" = ")),
+                      StringUtils.applyToString(value)
+                    )
+                  MethodUtils.methodCall(using cache)(bufferRef, "append", List(messageTerm))
+                }
+              }
+            )
           }
         )
-      }
-    )
+      case _ => ()
+    }
 
     cache.getBlockExprOf(
       MethodUtils

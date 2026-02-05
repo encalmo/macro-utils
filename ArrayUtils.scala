@@ -5,17 +5,18 @@ import scala.quoted.*
 object ArrayUtils {
 
   /** Build an efficient loop over an array. */
-  def buildArrayLoop[A: Type](using
+  def buildArrayLoop(using
       cache: StatementsCache
   )(
       arrayNamePrefix: String,
+      tpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
+      functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val itemType = TypeRepr.of[A]
+    val itemType = tpe
     val intType = TypeRepr.of[Int]
 
     // 1. Array Variable
@@ -61,7 +62,7 @@ object ArrayUtils {
       val itemValDef = ValDef(itemSym, Some(itemTerm))
 
       // B. User Logic
-      val userCode = onItem[A](Ref(itemSym))
+      val userCode = functionOnItem(tpe, Ref(itemSym))
 
       // C. Increment: i = i + 1
       // Note: Int.+ also has overloads, but usually Int is the default.
@@ -92,16 +93,17 @@ object ArrayUtils {
     )
   }
 
-  def createArrayViaList[A: Type](using
+  def createArrayViaList(using
       cache: StatementsCache
   )(
+      tpe: cache.quotes.reflect.TypeRepr,
       terms: List[cache.quotes.reflect.Term]
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
     // 1. Reuse your robust 'createStaticList' (using :: and Nil)
-    val listTerm = IterableUtils.createStaticList[A](terms) // Calls the function we fixed previously
+    val listTerm = IterableUtils.createStaticList(tpe, terms) // Calls the function we fixed previously
 
     // 2. Select .toArray method on the list
     // Signature: def toArray[B >: A : ClassTag]: Array[B]
@@ -111,7 +113,7 @@ object ArrayUtils {
       .head
 
     // 3. Resolve ClassTag (Required for toArray as well)
-    val itemType = TypeRepr.of[A]
+    val itemType = tpe
     val classTagType = TypeRepr.of[scala.reflect.ClassTag].appliedTo(itemType)
     val classTagTerm = Implicits.search(classTagType) match {
       case iss: ImplicitSearchSuccess => iss.tree

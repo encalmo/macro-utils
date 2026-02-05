@@ -4,17 +4,36 @@ import scala.quoted.*
 
 object IterableUtils {
 
-  def buildIterableLoop[CC: Type, A: Type](using
+  object TypeReprIsIterable {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Option[quotes.reflect.TypeRepr] = {
+      import quotes.reflect.*
+      val iterableSym = Symbol.requiredClass("scala.collection.Iterable")
+      // FIX: Check if the type actually implements Iterable using 'derivesFrom'
+      if (tpe.derivesFrom(iterableSym)) {
+        // It is safe to call baseType now
+        tpe.baseType(iterableSym) match {
+          case AppliedType(_, List(arg)) => Some(arg)
+          case _                         => Some(TypeRepr.of[Any]) // E.g. raw Iterable without type args
+        }
+      } else {
+        // Not an Iterable
+        None
+      }
+    }
+  }
+
+  def buildIterableLoop(using
       cache: StatementsCache
   )(
       iteratorName: String,
+      tpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term
+      functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val itemType = TypeRepr.of[A]
+    val itemType = tpe
     val iterableType = TypeRepr.of[Iterable].appliedTo(itemType)
 
     // FIX 1: Explicitly cast the target to Iterable[A]
@@ -63,7 +82,7 @@ object IterableUtils {
       )
       val itemValDef = ValDef(itemSym, Some(nextTerm))
 
-      val userCode = onItem[A](Ref(itemSym))
+      val userCode = functionOnItem(itemType, Ref(itemSym))
 
       Block(
         List(itemValDef, userCode),
@@ -76,12 +95,16 @@ object IterableUtils {
     Block(List(iteratorValDef), whileTerm)
   }
 
-  def buildIterableLoop[A: Type](using
+  def buildIterableLoop2(using
       cache: StatementsCache
   )(
       iteratorName: String,
+      tpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      onItem: [A: Type] => cache.quotes.reflect.Term => cache.quotes.reflect.Term // Logic to apply to each 'item'
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          cache.quotes.reflect.Term
+      ) => cache.quotes.reflect.Term // Logic to apply to each 'item'
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -89,7 +112,7 @@ object IterableUtils {
     // 1. Determine the Item Type (T)
     // We extract T from Iterable[T] to type the loop variable correctly.
     val iterableType = Symbol.requiredClass("scala.collection.Iterable")
-    val itemType = TypeRepr.of[A]
+    val itemType = tpe
 
     // --- Helper: Call a method, handling () vs no-args automatically ---
     def call(obj: Term, methodName: String): Term = {
@@ -124,7 +147,7 @@ object IterableUtils {
 
     // 3. Build Loop Condition: "it.hasNext"
     val condition = call(iteratorRef, "hasNext")
-    val valueName = TypeNameUtils.valueNameOf[A]
+    val valueName = TypeNameUtils.valueNameOf(tpe)
 
     // 4. Build Loop Body: "{ val x = it.next(); onItem(x) }"
     val loopBody = {
@@ -142,11 +165,7 @@ object IterableUtils {
       val itemValDef = ValDef(itemSym, Some(nextTerm))
 
       // C. Generate User Code
-      val userCode =
-        itemType.asType match {
-          case '[t] =>
-            onItem(Ref(itemSym))
-        }
+      val userCode = functionOnItem(itemType, Ref(itemSym))
 
       // D. Block(val x = ..., userCode, ())
       Block(
@@ -163,15 +182,16 @@ object IterableUtils {
   }
 
   /** Create a static list from a list of terms. */
-  def createStaticList[A: Type](using
+  def createStaticList(using
       cache: StatementsCache
   )(
+      tpe: cache.quotes.reflect.TypeRepr,
       terms: List[cache.quotes.reflect.Term]
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val itemType = TypeRepr.of[A]
+    val itemType = tpe
 
     // 1. Define Nil
     val nil: cache.quotes.reflect.Term =

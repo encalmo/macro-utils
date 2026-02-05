@@ -82,8 +82,9 @@ class UnionUtilsSpec extends munit.FunSuite {
       testTransformToMatchTermMethod(entity3),
       "case _: Boolean => true"
     )
-    intercept[Exception](
-      testTransformToMatchTermMethod("not a union type")
+    assertEquals(
+      testTransformToMatchTermMethod("not a union type"),
+      "not an union type"
     )
   }
 
