@@ -2,6 +2,31 @@ package org.encalmo.utils
 
 class TypeUtilsSpec extends munit.FunSuite {
 
+  test("testTypeReprIsPrimitiveOrStringOrBigDecimal") {
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[String], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Int], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Boolean], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Double], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Float], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Long], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Char], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Byte], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Short], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[BigDecimal], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[BigDecimal], true)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[java.math.BigDecimal], true)
+    // neg
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Unit], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[java.math.BigInteger], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[BigInt], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Option[String]], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[List[String]], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[Array[String]], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[NonEmptyTuple], false)
+    assertEquals(TypeUtilsTestMacro.testTypeReprIsPrimitiveOrStringOrBigDecimal[EmptyTuple], false)
+
+  }
+
   test("isCaseClass") {
     assertEquals(TypeUtils.isCaseClass[Hobby.Other], true)
     assertEquals(TypeUtils.isCaseClass[SensitiveData[String]], true)

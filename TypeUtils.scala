@@ -5,6 +5,28 @@ import scala.deriving.Mirror
 
 object TypeUtils {
 
+  object TypeReprIsPrimitiveOrStringOrBigDecimal {
+    def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
+      import quotes.reflect.*
+      // 1. Dealias to handle "type MyInt = Int"
+      val d = tpe.dealias
+      d =:= TypeRepr.of[String] ||
+      // 2. Check Standard Primitives
+      // We check against the TypeRepr of the standard types
+      d =:= TypeRepr.of[Boolean] ||
+      d =:= TypeRepr.of[Byte] ||
+      d =:= TypeRepr.of[Short] ||
+      d =:= TypeRepr.of[Int] ||
+      d =:= TypeRepr.of[Long] ||
+      d =:= TypeRepr.of[Float] ||
+      d =:= TypeRepr.of[Double] ||
+      d =:= TypeRepr.of[Char] ||
+      // 3. Check Big Numbers (Scala & Java)
+      d =:= TypeRepr.of[BigDecimal] ||
+      d =:= TypeRepr.of[java.math.BigDecimal]
+    }
+  }
+
   def underlyingTypeRepr[A: Type](using
       Quotes
   ): Either[quotes.reflect.TypeRepr, quotes.reflect.TypeRepr] =
