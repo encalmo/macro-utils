@@ -46,7 +46,8 @@ object EitherUtils {
     def buildCase(
         classSym: Symbol,
         tpeArgs: List[TypeRepr],
-        handler: (TypeRepr, Term) => Term
+        handler: (TypeRepr, Term) => Term,
+        handlerTpe: TypeRepr
     ): CaseDef = {
       // A. Construct the specific type: Left[L, R] or Right[L, R]
       val caseType = TypeIdent(classSym).tpe.appliedTo(tpeArgs)
@@ -64,15 +65,15 @@ object EitherUtils {
       val extractedValue = Select(Ref(tempSym), valueSym)
 
       // E. Return the CaseDef
-      CaseDef(bindPattern, None, handler(caseType, extractedValue))
+      CaseDef(bindPattern, None, handler(handlerTpe, extractedValue))
     }
 
     // 3. Build the two cases
     // Note: We must pass BOTH [L, R] to Left and Right types, not just one.
     // Left[String, Int] and Right[String, Int] are the valid subtypes of Either[String, Int].
     val typeArgs = List(leftTpe, rightTpe)
-    val caseLeft = buildCase(leftClassSym, typeArgs, functionOnLeft)
-    val caseRight = buildCase(rightClassSym, typeArgs, functionOnRight)
+    val caseLeft = buildCase(leftClassSym, typeArgs, functionOnLeft, leftTpe)
+    val caseRight = buildCase(rightClassSym, typeArgs, functionOnRight, rightTpe)
 
     // 4. Construct Match
     Match(target, List(caseLeft, caseRight))

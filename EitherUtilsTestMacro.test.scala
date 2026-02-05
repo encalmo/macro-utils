@@ -32,6 +32,8 @@ object EitherUtilsTestMacro {
                 .concat(
                   Literal(StringConstant("Left(")),
                   StringUtils.applyToString(term),
+                  Literal(StringConstant(":")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
                   Literal(StringConstant(")"))
                 )
             },
@@ -40,6 +42,8 @@ object EitherUtilsTestMacro {
                 .concat(
                   Literal(StringConstant("Right(")),
                   StringUtils.applyToString(term),
+                  Literal(StringConstant(":")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
                   Literal(StringConstant(")"))
                 )
             }
