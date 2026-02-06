@@ -8,6 +8,8 @@
 
 - [Dependencies](#dependencies)
 - [Usage](#usage)
+- [Patterns](#patterns)
+   - [StatementsCache](#statementscache)
 - [Project content](#project-content)
 
 ## Dependencies
