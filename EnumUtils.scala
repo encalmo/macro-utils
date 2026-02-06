@@ -6,6 +6,13 @@ import org.encalmo.utils.AnnotationUtils.computeInfo
 
 object EnumUtils {
 
+  enum EnumType {
+    case Value
+    case Class
+    case Java
+    case Unknown
+  }
+
   /** Check if a type is a Scala3 enum or a sealed abstract type, or a Java enum. */
   object TypeReprIsEnum {
     def unapply(using Quotes)(tpe: quotes.reflect.TypeRepr): Boolean = {
@@ -31,6 +38,42 @@ object EnumUtils {
     import quotes.reflect.*
     val sym = TypeRepr.of[A].dealias.typeSymbol
     sym.flags.is(Flags.JavaDefined) && sym.flags.is(Flags.Enum)
+  }
+
+  def hasEnumCaseClasses(using cache: StatementsCache)(tpe: cache.quotes.reflect.TypeRepr): Boolean = {
+    findEnumCases(tpe).exists(_._2 == EnumType.Class)
+  }
+
+  def findEnumCases(using
+      cache: StatementsCache
+  )(tpe: cache.quotes.reflect.TypeRepr): List[(cache.quotes.reflect.Symbol, EnumType)] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val enumType = tpe.dealias
+    val enumSymbol = enumType.typeSymbol
+    val enumCompanion = enumSymbol.companionModule
+
+    def enumCases: List[Symbol] = {
+      if enumSymbol.flags.is(Flags.JavaDefined)
+        && enumSymbol.flags.is(Flags.Enum)
+      then
+        enumSymbol.companionModule.moduleClass.declarations
+          .filter { member => member.flags.is(Flags.Enum) }
+      else if enumSymbol.flags.is(Flags.Sealed)
+        && (enumSymbol.flags.is(Flags.Enum) || enumSymbol.flags.is(Flags.Trait))
+      then enumSymbol.children
+      else Nil
+    }
+
+    enumCases.map { enumCase =>
+      val enumType =
+        if enumCompanion.declaredField(enumCase.name).exists then EnumType.Value
+        else if enumCompanion.declaredType(enumCase.name).nonEmpty then EnumType.Class
+        else if enumCase.flags.is(Flags.JavaDefined) && enumCase.flags.is(Flags.Enum) then EnumType.Java
+        else EnumType.Unknown
+      (enumCase, enumType)
+    }
   }
 
   /** Visit an enum, create a pattern match stattement of enum cases.
