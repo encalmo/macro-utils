@@ -94,6 +94,14 @@ object AnnotationUtils {
       annotations.find(_.name == name)
     }
 
+    def remove[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    ): Set[AnnotationInfo] = {
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations.filter(_.name != name)
+    }
+
     def getTermOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type](using
         cache: StatementsCache
     )(parameter: String, defaultValue: cache.quotes.reflect.Term): cache.quotes.reflect.Term =
