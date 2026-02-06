@@ -14,38 +14,73 @@ class MethodUtilsSpec extends munit.FunSuite {
   }
   val animal = new Animal("Rex", 5)
 
+  test("select a term from a case class") {
+    assertEquals(
+      testMaybeSelectTerm("name", human),
+      "MethodUtilsSpec.this.human.name: String = John"
+    )
+  }
+
+  test("select a term from a case class") {
+    assertEquals(
+      testMaybeSelectTerm("age", human),
+      "MethodUtilsSpec.this.human.age: Int = 30"
+    )
+  }
+
+  test("select getName term from a class") {
+    assertEquals(
+      testMaybeSelectTerm("foo", animal),
+      "MethodUtilsSpec.this.animal.foo: String = Rex5"
+    )
+  }
+
+  test("select getName term from a class") {
+    assertEquals(
+      testMaybeSelectTerm("name", animal),
+      "MethodUtilsSpec.this.animal.name: String = REX"
+    )
+  }
+
+  test("select getAge term from a class") {
+    assertEquals(
+      testMaybeSelectTerm("age", animal),
+      "MethodUtilsSpec.this.animal.age: Int = 5"
+    )
+  }
+
   test("select a value from a case class") {
     assertEquals(
       testMaybeSelectedValue("name", human),
-      "name: String = John"
+      "MethodUtilsSpec.this.human.name: String = John"
     )
   }
 
   test("select a value from a case class") {
     assertEquals(
       testMaybeSelectedValue("age", human),
-      "age: Int = 30"
+      "MethodUtilsSpec.this.human.age: Int = 30"
     )
   }
 
   test("select a method from a class") {
     assertEquals(
       testMaybeSelectedValue("foo", animal),
-      "foo: String = Rex5"
+      "MethodUtilsSpec.this.animal.foo: String = Rex5"
     )
   }
 
   test("select getName method from a class") {
     assertEquals(
       testMaybeSelectedValue("name", animal),
-      "name: String = REX"
+      "MethodUtilsSpec.this.animal.getName(): String = REX"
     )
   }
 
   test("select getAge method from a class") {
     assertEquals(
       testMaybeSelectedValue("age", animal),
-      "age: Int = 5"
+      "MethodUtilsSpec.this.animal.getAge(): Int = 5"
     )
   }
 

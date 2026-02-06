@@ -29,12 +29,13 @@ or with SCALA-CLI
 ## Patterns
 
 ### StatementsCache
-StatementsCache is an internal utility class designed to manage and cache statements  and symbols generated during macro execution. 
+StatementsCache is an internal utility class designed to manage and cache statements and symbols generated during macro execution. 
 
 When writing macros in Scala 3 using quotes and nested splicing (`${...}`) frequently leads to conflicts and duplicated code. To mitigate those issues each instance of `StatementsCache` provides:
-- append-only list of statements converted at the end to expression and returned from macro
+
+- append-only list of statements convertible at the end to an expression and returned from a macro
 - helpers to create reusable methods and values in different scopes (local, outer, toplevel)
-- method to create a separate nested caches preserving hierarchical reference lookup.
+- method to fork off a nested cache preserving hierarchical reference lookup.
 
 All utils in `macro-utils` accept a `StatementsCache` instance. This enables macro authors to compose complex, nested code-generation logic confidently while maintaining correctness and reusability.
 

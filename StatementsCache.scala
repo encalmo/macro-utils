@@ -424,7 +424,7 @@ object StatementsCache {
       cache.put(statement)
 
     def applyToString: cache.quotes.reflect.Term =
-      StringUtils.applyToString(using cache.quotes)(term)
+      StringUtils.applyToString(using cache)(term)
 
     def methodCall(methodName: String, args: List[cache.quotes.reflect.Term]): cache.quotes.reflect.Term =
       MethodUtils.methodCall(term, methodName, args)

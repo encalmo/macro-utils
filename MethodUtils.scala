@@ -33,13 +33,11 @@ object MethodUtils {
   /** Maybe select a value from expression using a selector and call the provided function if found, or call fallback
     * function if not found.
     */
-  def maybeSelectedValue[T: Type](
+  def maybeSelectExpr[T: Type](
       selector: String,
-      label: Expr[String],
       expr: Expr[T],
-      functionExpr: [A: Type] => (Expr[String], Expr[A]) => Expr[Unit],
-      fallbackExpr: => Expr[Unit]
-  )(using quotes: Quotes): Expr[Unit] = {
+      functionExpr: [A: Type] => Expr[A] => Expr[Unit]
+  )(using quotes: Quotes): Option[Expr[Unit]] = {
     import quotes.reflect.*
     val tpe = TypeRepr.of[T].dealias
     val classSymbol = tpe.typeSymbol
@@ -67,28 +65,86 @@ object MethodUtils {
           }
       }
 
-    targetSymbol match {
-      case Some(sym) =>
-        val actualType: TypeRepr =
-          tpe.memberType(sym) match {
-            case MethodType(_, _, res) => res
-            case ByNameType(u)         => u
-            case PolyType(_, _, res)   => res
-            case other                 => other
-          }
-
-        val select = Select(expr.asTerm, sym)
-        val term =
-          if (sym.paramSymss == List(Nil))
-          then Apply(select, Nil)
-          else select
-
-        actualType.asType match {
-          case '[a] =>
-            functionExpr.apply[a](Expr(selector), term.asExprOf[a])
+    targetSymbol.map { sym =>
+      val actualType: TypeRepr =
+        tpe.memberType(sym) match {
+          case MethodType(_, _, res) => res
+          case ByNameType(u)         => u
+          case PolyType(_, _, res)   => res
+          case other                 => other
         }
 
-      case None => fallbackExpr
+      val select = Select(expr.asTerm, sym)
+      val term =
+        if (sym.paramSymss == List(Nil))
+        then Apply(select, Nil)
+        else select
+
+      actualType.asType match {
+        case '[a] =>
+          functionExpr.apply[a](term.asExprOf[a])
+      }
+    }
+  }
+
+  /** Maybe select a value from expression using a selector and call the provided function if found, or call fallback
+    * function if not found.
+    *
+    * @param selector
+    *   The name of the field or paramless method to select, or the name of the property for which there is getter
+    *   method
+    */
+  def maybeSelectTerm(using
+      cache: StatementsCache
+  )(
+      selector: String, //
+      tpe: cache.quotes.reflect.TypeRepr,
+      valueTerm: cache.quotes.reflect.Term,
+      functionWhenSelected: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => Unit
+  ): Option[Unit] = {
+    import cache.quotes.reflect.*
+
+    val classSymbol = tpe.typeSymbol
+
+    // Try to find a field with the selector name.
+    val fieldSymbol = classSymbol.fieldMember(selector)
+    val targetSymbol =
+      if (fieldSymbol.exists && !fieldSymbol.flags.is(Flags.Private | Flags.PrivateLocal))
+      then Some(fieldSymbol)
+      else {
+        classSymbol
+          .methodMember(selector)
+          .find { sym =>
+            val params = sym.paramSymss
+            // Matches: def foo: T (Nil) OR def foo(): T (List(Nil))
+            params == Nil || params == List(Nil)
+          }
+          .orElse {
+            val getterName = s"get${selector.capitalize}"
+            classSymbol.methodMember(getterName).find { sym =>
+              val params = sym.paramSymss
+              // Matches: def getFoo: T (Nil) OR def getFoo(): T (List(Nil))
+              params == Nil || params == List(Nil)
+            }
+          }
+      }
+
+    targetSymbol.map { sym =>
+      val selectedTpe: TypeRepr =
+        tpe.memberType(sym) match {
+          case MethodType(_, _, res) => res
+          case ByNameType(u)         => u
+          case PolyType(_, _, res)   => res
+          case other                 => other
+        }
+
+      val select = Select(valueTerm, sym)
+      val selectedTerm =
+        if (sym.paramSymss == List(Nil))
+        then Apply(select, Nil)
+        else select
+
+      functionWhenSelected(selectedTpe, selectedTerm)
     }
   }
 

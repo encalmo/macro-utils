@@ -9,26 +9,67 @@ object MethodUtilsTestMacro {
     ${ testMaybeSelectedValueImpl[T]('{ selector }, '{ expr }) }
   }
 
-  def testMaybeSelectedValueImpl[T: Type](selectorExpr: Expr[String], exprExpr: Expr[T])(using Quotes): Expr[String] = {
+  def testMaybeSelectedValueImpl[T: Type](selectorExpr: Expr[String], expr: Expr[T])(using Quotes): Expr[String] = {
     import quotes.reflect.*
     '{
       var result: String = ""
       ${
-        maybeSelectedValue(
+        maybeSelectExpr(
           selectorExpr.valueOrAbort,
-          selectorExpr,
-          exprExpr,
-          functionExpr = { [A: Type] => (name, value) =>
+          expr,
+          functionExpr = { [A: Type] => valueExpr =>
+            val selected = Expr(valueExpr.asTerm.show(using Printer.TreeCode))
             '{
-              result = ${ name } + ": " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) }
-                + " = " + ${ value }
+              result = ${ selected } + ": " + ${
+                Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode))
+              } + " = " + ${ valueExpr }
             }
-          },
-          fallbackExpr = '{ result = "selector not found" }
-        )
+          }
+        ).getOrElse('{ result = "selector not found" })
       }
       result
     }
+  }
+
+  inline def testMaybeSelectTerm[T](selector: String, expr: T): String = {
+    ${ testMaybeSelectTermImpl[T]('{ selector }, '{ expr }) }
+  }
+
+  def testMaybeSelectTermImpl[T: Type](selectorExpr: Expr[String], exprExpr: Expr[T])(using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    testMaybeSelectTerm2Impl[T](selectorExpr.valueOrAbort, exprExpr.asTerm)
+  }
+
+  def testMaybeSelectTerm2Impl[T: Type](using
+      cache: StatementsCache
+  )(selector: String, valueTerm: cache.quotes.reflect.Term): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    maybeSelectTerm(
+      selector,
+      TypeRepr.of[T],
+      valueTerm,
+      functionWhenSelected = { (tpe, term) =>
+        cache.put {
+          StringUtils.concat(
+            Literal(StringConstant(valueTerm.show(using Printer.TreeCode))),
+            Literal(StringConstant(".")),
+            Literal(StringConstant(selector)),
+            Literal(StringConstant(": ")),
+            Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
+            Literal(StringConstant(" = ")),
+            term
+          )
+        }
+      }
+    )
+
+    val result = cache.asTerm
+    // report.warning(result.show(using Printer.TreeCode))
+    result.asExprOf[String]
   }
 
   inline def testCallOrBuildMethodOfUnitWithCache(

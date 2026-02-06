@@ -5,8 +5,11 @@ import scala.quoted.*
 object StringUtils {
 
   /** Concatenate a list of terms to a string. */
-  def concat(using Quotes)(term: quotes.reflect.Term, terms: quotes.reflect.Term*): quotes.reflect.Term = {
-    import quotes.reflect.*
+  def concat(using
+      cache: StatementsCache
+  )(term: cache.quotes.reflect.Term, terms: cache.quotes.reflect.Term*): cache.quotes.reflect.Term = {
+    import cache.quotes.reflect.*
+    given cache.quotes.type = cache.quotes
 
     val stringPlusSym = defn.StringClass
       .methodMember("+")
@@ -32,8 +35,9 @@ object StringUtils {
   }
 
   /** Best effort to convert a term to a string. */
-  def applyToString(using Quotes)(term: quotes.reflect.Term): quotes.reflect.Term = {
-    import quotes.reflect.*
+  def applyToString(using cache: StatementsCache)(term: cache.quotes.reflect.Term): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
 
     term.tpe match {
       case t if t <:< TypeRepr.of[String] => term
