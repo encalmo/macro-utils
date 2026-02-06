@@ -396,9 +396,6 @@ object StatementsCache {
     case Local
   }
 
-  def createNestedScope(cacheId: String = "nested")(using cache: StatementsCache): StatementsCache =
-    cache.createNestedScope(cacheId)
-
   def block(using outer: StatementsCache)(buildBlock: StatementsCache ?=> Unit): outer.quotes.reflect.Term = {
     val nested = outer.createNestedScope("block")
     given nested.quotes.type = nested.quotes
@@ -419,9 +416,6 @@ object StatementsCache {
   }
 
   extension (using cache: StatementsCache)(term: cache.quotes.reflect.Term) {
-
-    def put(statement: cache.quotes.reflect.Statement): Unit =
-      cache.put(statement)
 
     def applyToString: cache.quotes.reflect.Term =
       StringUtils.applyToString(using cache)(term)
