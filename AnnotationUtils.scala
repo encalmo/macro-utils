@@ -7,6 +7,14 @@ object AnnotationUtils {
   case class AnnotationInfo(name: String, params: Map[String, Any]) {
     override def toString: String =
       s"@${TypeNameUtils.shortBaseName(name)}(${params.map { case (k, v) => s"$k=$v" }.mkString(", ")})"
+
+    def renameAs[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    ): AnnotationInfo = {
+      import cache.quotes.reflect.*
+      val newName = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      AnnotationInfo(newName, params)
+    }
   }
 
   def annotationsOf(using cache: StatementsCache)(tpe: cache.quotes.reflect.TypeRepr): Set[AnnotationInfo] = {
@@ -77,6 +85,14 @@ object AnnotationUtils {
       import cache.quotes.reflect.*
       val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
       annotations.exists(_.name == name)
+
+    def find[Annotation <: scala.annotation.StaticAnnotation: Type](using
+        cache: StatementsCache
+    ): Option[AnnotationInfo] = {
+      import cache.quotes.reflect.*
+      val name = TypeRepr.of[Annotation].show(using Printer.TypeReprCode)
+      annotations.find(_.name == name)
+    }
 
     def getTermOrDefault[Annotation <: scala.annotation.StaticAnnotation: Type](using
         cache: StatementsCache
