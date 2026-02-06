@@ -426,8 +426,12 @@ object StatementsCache {
     def applyToString: cache.quotes.reflect.Term =
       StringUtils.applyToString(using cache)(term)
 
-    def methodCall(methodName: String, args: List[cache.quotes.reflect.Term]): cache.quotes.reflect.Term =
-      MethodUtils.methodCall(term, methodName, args)
+    def methodCall(
+        methodName: String,
+        args: List[cache.quotes.reflect.Term],
+        moreArgs: List[cache.quotes.reflect.Term]*
+    ): cache.quotes.reflect.Term =
+      MethodUtils.methodCall(term, methodName, args, moreArgs*)
 
     def callAsInstanceOf[T: Type]: cache.quotes.reflect.Term =
       import cache.quotes.reflect.*

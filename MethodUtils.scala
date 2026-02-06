@@ -156,11 +156,18 @@ object MethodUtils {
   )(
       targetTerm: cache.quotes.reflect.Term,
       methodName: String,
-      argTerms: List[cache.quotes.reflect.Term]
+      argTerms: List[cache.quotes.reflect.Term],
+      moreArgTerms: List[cache.quotes.reflect.Term]*
   ): cache.quotes.reflect.Term = {
     val tpe = targetTerm.tpe.dealias.widen
-    val methodSym = findMethodByArity(tpe, methodName, argTerms.size)
-    buildMethodCall(targetTerm, methodSym, argTerms)
+    if (moreArgTerms.isEmpty)
+    then {
+      val methodSymbol = findMethodByArity(tpe, methodName, argTerms.size)
+      buildMethodCall(targetTerm, methodSymbol, argTerms)
+    } else {
+      val methodSymbol = findMethodByArities(tpe, methodName, argTerms.size :: moreArgTerms.toList.map(_.size))
+      buildMethodCall(targetTerm, methodSymbol, argTerms ++ moreArgTerms.flatten)
+    }
   }
 
   def findMethodByArity(using
@@ -187,6 +194,36 @@ object MethodUtils {
 
     matched.getOrElse {
       report.errorAndAbort(s"Method '$name' with $arity arguments not found in ${tpe.show}")
+    }
+  }
+
+  def findMethodByArities(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      name: String,
+      arities: List[Int]
+  ): cache.quotes.reflect.Symbol = {
+    import cache.quotes.reflect.*
+
+    val clsSym = tpe.typeSymbol
+    val candidates = clsSym.methodMember(name)
+
+    // Filter by argument count (ignoring type parameters like [T])
+    val matched = candidates.find { sym =>
+      val valueParamLists = sym.paramSymss
+        .filterNot { clause =>
+          clause.headOption.exists(_.isType)
+        }
+
+      valueParamLists.size == arities.size
+      && valueParamLists
+        .zip(arities)
+        .forall { (valueParamList, arity) => valueParamList.size == arity }
+    }
+
+    matched.getOrElse {
+      report.errorAndAbort(s"Method '$name' with ${arities.mkString(", ")} arguments not found in ${tpe.show}")
     }
   }
 

@@ -110,4 +110,34 @@ object MethodUtilsTestMacro {
     )
     cache.getBlockExprOfUnit
   }
+
+  class Testy(id: String) {
+    def foo(a: Int, b: Int)(c: String): String = {
+      id + ":" + c + a + "-" + b
+    }
+  }
+
+  inline def testMethodCall(testy: Testy): String = {
+    ${ testMethodCallImpl('{ testy }) }
+  }
+
+  def testMethodCallImpl(testyExpr: Expr[Testy])(using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    testMethodCall2Impl(testyExpr.asTerm)
+  }
+
+  def testMethodCall2Impl(using cache: StatementsCache)(testyTerm: cache.quotes.reflect.Term): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    cache.put {
+      testyTerm.methodCall(
+        "foo",
+        List(Literal(IntConstant(1)), Literal(IntConstant(2))),
+        List(Literal(StringConstant("foo")))
+      )
+    }
+    cache.getBlockExprOf[String]
+  }
 }

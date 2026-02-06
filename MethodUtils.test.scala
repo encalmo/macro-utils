@@ -88,4 +88,11 @@ class MethodUtilsSpec extends munit.FunSuite {
     testCallOrBuildMethodOfUnitWithCache("foo")
   }
 
+  test("call a method with multiple arguments on a class") {
+    assertEquals(
+      testMethodCall(new Testy("bar")),
+      "bar:foo1-2"
+    )
+  }
+
 }
