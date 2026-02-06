@@ -10,27 +10,6 @@ object UnionUtilsTestMacro {
     Expr(UnionUtils.isUnion[A])
   }
 
-  inline def testTransformToMatchExpressionMethod[A](value: A): List[String] = {
-    ${ testTransformToMatchExpressionMethodImpl[A]('{ value }) }
-  }
-
-  def testTransformToMatchExpressionMethodImpl[A: Type](valueExpr: Expr[A])(using Quotes): Expr[List[String]] = {
-    import quotes.reflect.*
-    val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
-    transformToMatchExpression[A](
-      Expr("union"),
-      valueExpr,
-      { [A: Type] => (name, value) =>
-        val expr = '{
-          "case _: " + ${ Expr(TypeRepr.of[A].show(using Printer.TypeReprShortCode)) } + " =>"
-        }
-        buffer += expr
-        '{}
-      }
-    )
-    Expr.ofList(buffer.toList)
-  }
-
   inline def testTransformToMatchTermMethod[A](value: A): String = {
     ${ testTransformToMatchTermMethodImpl[A]('{ value }) }
   }

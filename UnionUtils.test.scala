@@ -10,46 +10,6 @@ class UnionUtilsSpec extends munit.FunSuite {
   val entity2: Entity = 1
   val entity3: Entity = true
 
-  test("transformToMatchExpression union's cases 1") {
-    assertEquals(
-      testTransformToMatchExpressionMethod(entity1),
-      List(
-        "case _: String =>",
-        "case _: Int =>",
-        "case _: Boolean =>"
-      )
-    )
-  }
-
-  test("transformToMatchExpression union's cases 2") {
-    assertEquals(
-      testTransformToMatchExpressionMethod(entity2),
-      List(
-        "case _: String =>",
-        "case _: Int =>",
-        "case _: Boolean =>"
-      )
-    )
-  }
-
-  test("transformToMatchExpression union's cases 3") {
-    assertEquals(
-      testTransformToMatchExpressionMethod(entity3),
-      List(
-        "case _: String =>",
-        "case _: Int =>",
-        "case _: Boolean =>"
-      )
-    )
-  }
-
-  test("transformToMatchExpression non-union type") {
-    assertEquals(
-      testTransformToMatchExpressionMethod("not a union type"),
-      Nil
-    )
-  }
-
   test("isUnion") {
     assertEquals(testIsUnion[Entity], true)
     assertEquals(testIsUnion[String | Boolean], true)

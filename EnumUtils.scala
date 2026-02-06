@@ -101,14 +101,26 @@ object EnumUtils {
             then Select(Ref(enumCompanion), enumCase).tpe
             else enumCase.typeRef
 
+          val bindSym = Symbol.newBind(
+            Symbol.spliceOwner,
+            TypeNameUtils.valueNameOf(tpe),
+            Flags.EmptyFlags,
+            tpe
+          )
+
           val matchCasePattern =
             if isEnumCaseType
-            then Typed(Wildcard(), TypeSelect(Ref(enumCompanion), enumCase.name))
-            else if enumCompanion.declaredField(enumCase.name).exists
+            then {
+              val typeCheckPattern = Typed(Wildcard(), TypeSelect(Ref(enumCompanion), enumCase.name))
+              Bind(bindSym, typeCheckPattern)
+            } else if enumCompanion.declaredField(enumCase.name).exists
             then Ref(enumCase)
             else if isJavaEnumCase
             then Ref(enumCase)
-            else Typed(Wildcard(), TypeTree.of(using enumCase.typeRef.asType))
+            else {
+              val typeCheckPattern = Typed(Wildcard(), TypeTree.of(using enumCase.typeRef.asType))
+              Bind(bindSym, typeCheckPattern)
+            }
 
           val matchCaseBody =
             tpe.asType match {
@@ -118,14 +130,14 @@ object EnumUtils {
                   functionWhenCaseValue(
                     tpe,
                     enumCase.name,
-                    valueTerm,
+                    Ref(enumCase),
                     enumCaseSymbol.annotations.computeInfo
                   )
                 else
                   functionWhenCaseClass(
                     tpe,
                     enumCase.name,
-                    valueTerm,
+                    Ref(bindSym),
                     enumCaseSymbol.annotations.computeInfo
                   )
             }

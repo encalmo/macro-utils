@@ -49,7 +49,9 @@ object EnumUtilsTestMacro {
         )
     }
 
-    cache.getBlockExprOf[String]
+    val result = cache.asTerm
+    // report.warning(result.show(using Printer.TreeCode))
+    result.asExprOf[String]
   }
 
 }
