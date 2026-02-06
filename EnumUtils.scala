@@ -68,8 +68,8 @@ object EnumUtils {
 
     enumCases.map { enumCase =>
       val enumType =
-        if enumCompanion.declaredField(enumCase.name).exists then EnumType.Value
-        else if enumCompanion.declaredType(enumCase.name).nonEmpty then EnumType.Class
+        if enumCompanion.declaredType(enumCase.name).nonEmpty then EnumType.Class
+        else if enumCompanion.declaredField(enumCase.name).exists then EnumType.Value
         else if enumCase.flags.is(Flags.JavaDefined) && enumCase.flags.is(Flags.Enum) then EnumType.Java
         else EnumType.Unknown
       (enumCase, enumType)
