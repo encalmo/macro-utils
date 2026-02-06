@@ -48,7 +48,6 @@ object JavaRecordUtilsTestMacro {
       case TypeReprIsJavaRecord() =>
 
         visit(
-          "java record",
           TypeRepr.of[A],
           valueExpr.asTerm,
           functionOnField = { (tpe, name, value) =>

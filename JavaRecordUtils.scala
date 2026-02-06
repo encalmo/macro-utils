@@ -87,7 +87,6 @@ object JavaRecordUtils {
   def visit(using
       cache: StatementsCache
   )(
-      label: String,
       tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
       functionOnField: (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
