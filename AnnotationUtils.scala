@@ -197,6 +197,10 @@ object AnnotationUtils {
           case value         =>
             report.errorAndAbort(s"Expected String but got ${value.getClass.getName} for parameter '$parameter'")
         })
+
+    def hash(filter: String => Boolean): String =
+      val filtered = annotations.filter(annotation => filter(annotation.name))
+      if (filtered.isEmpty) "" else "_" + filtered.map(_.hashCode()).sum.toString
   }
 
   extension (using cache: StatementsCache)(annotations: List[cache.quotes.reflect.Term]) {
