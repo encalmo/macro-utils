@@ -20,11 +20,11 @@
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.9.43"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.10.0"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.9.43
+    //> using dep org.encalmo::macro-utils:0.10.0
 
 ## Patterns
 
