@@ -53,10 +53,9 @@ object TupleUtilsTestMacro {
       case TypeReprIsTuple() =>
 
         visit(
-          Some("tuple"),
           TypeRepr.of[A],
           valueExpr.asTerm,
-          functionOnItem = { (tpe, name, value, index) =>
+          functionOnItem = { (tpe, value, index) =>
             {
               cache.put {
                 val messageTerm = StringUtils.concat(

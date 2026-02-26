@@ -67,10 +67,9 @@ object UnionUtilsTestMacro {
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
     TupleUtils.visit(
-      label = Some("tuple"),
       tpe = TypeRepr.of[A],
       valueTerm = valueExpr.asTerm,
-      functionOnItem = { (tpe, name, value, index) =>
+      functionOnItem = { (tpe, value, index) =>
         cache.put {
           transformToMatchTerm(
             tpe,

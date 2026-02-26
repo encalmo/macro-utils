@@ -105,12 +105,10 @@ object TupleUtils {
   def visit(using
       cache: StatementsCache
   )(
-      label: Option[String],
       tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
       functionOnItem: (
           cache.quotes.reflect.TypeRepr,
-          Option[String],
           cache.quotes.reflect.Term,
           Int
       ) => Unit
@@ -136,7 +134,7 @@ object TupleUtils {
               (TypeRepr.of[head], TypeUtils.tupleTypeToTypeList[tail])
           }
 
-        visitTuple(tpe, headTpe, tailTpes, label, valueTerm, functionOnItem, 0)
+        visitTuple(tpe, headTpe, tailTpes, valueTerm, functionOnItem, 0)
 
       case _ => ()
     }
@@ -148,11 +146,9 @@ object TupleUtils {
       tpe: cache.quotes.reflect.TypeRepr,
       headTpe: cache.quotes.reflect.TypeRepr,
       tailTpes: List[cache.quotes.reflect.TypeRepr],
-      label: Option[String],
       valueTerm: cache.quotes.reflect.Term,
       functionOnItem: (
           cache.quotes.reflect.TypeRepr,
-          Option[String],
           cache.quotes.reflect.Term,
           Int
       ) => Unit,
@@ -165,7 +161,6 @@ object TupleUtils {
       case '[head] =>
         functionOnItem(
           headTpe,
-          label,
           valueTerm
             .methodCall("productElement", List(Literal(IntConstant(n))))
             .callAsInstanceOf(cache.quotes.reflect.Inferred(headTpe)),
@@ -179,7 +174,6 @@ object TupleUtils {
           tpe,
           headTpe2,
           tailTpes2,
-          label,
           valueTerm,
           functionOnItem,
           n + 1

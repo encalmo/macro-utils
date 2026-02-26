@@ -26,11 +26,10 @@ object IterableUtilsTestMacro {
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
     TupleUtils.visit(
-      label = Some("test"),
       tpe = TypeRepr.of[A],
       valueTerm = valueTerm,
       functionOnItem = {
-        (tpe, name, value, index) =>
+        (tpe, value, index) =>
           tpe match {
             case TypeReprIsIterable(itemType) =>
               cache.put {
