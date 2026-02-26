@@ -56,7 +56,11 @@ object TypeUtils {
                Left(bound)
 
              case None =>
-               Right(tpe)
+               OpaqueTypeUtils
+                 .findBaseTypeFromUnapply(tpe)
+                 .orElse(OpaqueTypeUtils.findBaseTypeFromApply(tpe))
+                 .map(Left(_))
+                 .getOrElse(Right(tpe))
            }
          } else Right(sym.typeRef))
     }

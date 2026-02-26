@@ -9,6 +9,8 @@ class OpaqueTypeUtilsSpec extends munit.FunSuite {
   val disability = Disability("blindness")
   val driverLicense = DriverLicense("1234567890", LocalDate.now())
   val skills = Skills("Java", "Scala", "Python")
+  val nationalID = NationalID(Document("1234567890", LocalDate.now()))
+  val fishingLicense = FishingLicense("1234567890", LocalDate.now())
 
   test("visit opaque type with an upper bound - DriverLicense") {
     assertEquals(
@@ -24,17 +26,31 @@ class OpaqueTypeUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("visit opaque type with an unapply method - NationalID") {
+    assertEquals(
+      testVisit(nationalID),
+      "opaque type with an upper bound of Document"
+    )
+  }
+
+  test("visit opaque type with an apply method - FishingLicense") {
+    assertEquals(
+      testVisit(fishingLicense),
+      "opaque type with an upper bound of Document"
+    )
+  }
+
   test("visit opaque type without upper bound - PassportNumber") {
     assertEquals(
       testVisit(passportNumber),
-      "not an opaque type PassportNumber"
+      "opaque type with an upper bound of String"
     )
   }
 
   test("visit opaque type without upper bound - Disability") {
     assertEquals(
       testVisit(disability),
-      "not an opaque type Disability"
+      "opaque type with an upper bound of SensitiveData"
     )
   }
 
@@ -44,4 +60,61 @@ class OpaqueTypeUtilsSpec extends munit.FunSuite {
       "not an opaque type String"
     )
   }
+
+  test("find base type from unapply - DriverLicense") {
+    assertEquals(
+      testFindBaseTypeFromUnapply[DriverLicense],
+      "<none>"
+    )
+  }
+
+  test("find base type from unapply - FishingLicense") {
+    assertEquals(
+      testFindBaseTypeFromUnapply[FishingLicense],
+      "<none>"
+    )
+  }
+
+  test("find base type from unapply - NationalID") {
+    assertEquals(
+      testFindBaseTypeFromUnapply[NationalID],
+      "Document"
+    )
+  }
+
+  test("find base type from unapply - FishingLicense") {
+    assertEquals(
+      testFindBaseTypeFromUnapply[FishingLicense],
+      "<none>"
+    )
+  }
+
+  test("find base type from apply - DriverLicense") {
+    assertEquals(
+      testFindBaseTypeFromApply[DriverLicense],
+      "Document"
+    )
+  }
+
+  test("find base type from apply - FishingLicense") {
+    assertEquals(
+      testFindBaseTypeFromApply[FishingLicense],
+      "Document"
+    )
+  }
+
+  test("find base type from apply - NationalID") {
+    assertEquals(
+      testFindBaseTypeFromApply[NationalID],
+      "Document"
+    )
+  }
+
+  test("find base type from apply - Disability") {
+    assertEquals(
+      testFindBaseTypeFromApply[Disability],
+      "SensitiveData"
+    )
+  }
+
 }

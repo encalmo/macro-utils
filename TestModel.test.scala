@@ -40,6 +40,18 @@ object DriverLicense {
   def apply(number: String, expiryDate: LocalDate): DriverLicense = Document(number, expiryDate)
 }
 
+opaque type NationalID = Document
+object NationalID {
+  def unapply(id: NationalID): Document = id
+  def apply(document: Document): NationalID = document
+}
+
+opaque type FishingLicense = Document
+object FishingLicense {
+  def apply(number: String, expiryDate: LocalDate): FishingLicense =
+    Document(number, expiryDate)
+}
+
 case class Document(
     number: String,
     expiryDate: LocalDate

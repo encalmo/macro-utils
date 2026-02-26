@@ -43,4 +43,22 @@ object OpaqueUtilsTestMacro {
     cache.getBlockExprOf[String]
   }
 
+  inline def testFindBaseTypeFromUnapply[A]: String = {
+    ${ testFindBaseTypeFromUnapplyImpl[A] }
+  }
+
+  def testFindBaseTypeFromUnapplyImpl[A: Type](using Quotes): Expr[String] = {
+    import quotes.reflect.*
+    Expr(findBaseTypeFromUnapply(TypeRepr.of[A]).map(_.show(using Printer.TypeReprShortCode)).getOrElse("<none>"))
+  }
+
+  inline def testFindBaseTypeFromApply[A]: String = {
+    ${ testFindBaseTypeFromApplyImpl[A] }
+  }
+
+  def testFindBaseTypeFromApplyImpl[A: Type](using Quotes): Expr[String] = {
+    import quotes.reflect.*
+    Expr(findBaseTypeFromApply(TypeRepr.of[A]).map(_.show(using Printer.TypeReprShortCode)).getOrElse("<none>"))
+  }
+
 }

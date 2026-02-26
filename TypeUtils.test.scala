@@ -61,7 +61,7 @@ class TypeUtilsSpec extends munit.FunSuite {
   test("isString") {
     assertEquals(TypeUtils.isString[String], true)
     // neg
-    assertEquals(TypeUtils.isString[PassportNumber], false)
+    assertEquals(TypeUtils.isString[PassportNumber], true)
     assertEquals(TypeUtils.isString[Int], false)
     assertEquals(TypeUtils.isString[Boolean], false)
     assertEquals(TypeUtils.isString[Double], false)
