@@ -20,11 +20,11 @@
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.10.3"
+    libraryDependencies += "org.encalmo" %% "macro-utils" % "0.10.4"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::macro-utils:0.10.3
+    //> using dep org.encalmo::macro-utils:0.10.4
 
 ## Patterns
 
@@ -86,6 +86,9 @@ All utils in `macro-utils` accept a `StatementsCache` instance. This enables mac
 ├── MethodUtils.scala
 ├── MethodUtils.test.scala
 ├── MethodUtilsTestMacro.test.scala
+├── NamedTupleUtils.scala
+├── NamedTupleUtils.test.scala
+├── NamedTupleUtilsTestMacro.test.scala
 ├── OpaqueTypeUtils.scala
 ├── OpaqueTypeUtils.test.scala
 ├── OpaqueUtilsTestMacro.test.scala
