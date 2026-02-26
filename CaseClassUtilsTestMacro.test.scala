@@ -26,10 +26,11 @@ object CaseClassUtilsTestMacro {
 
     val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
 
-    TypeRepr.of[A] match {
+    val tpe = TypeRepr.of[A]
+    tpe match {
       case TypeReprIsCaseClass() =>
         visit(
-          TypeRepr.of[A],
+          tpe,
           valueExpr.asTerm,
           { (tpe, name, value, annotations) =>
             cache.put {

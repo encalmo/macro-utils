@@ -49,19 +49,16 @@ object CaseClassUtils {
         case Left(tpe)  => tpe
         case Right(tpe) => tpe
       }
-      parentTpe.asType match {
-        case '[p] =>
-          parentTpe.typeSymbol.caseFields
-            .map { caseField =>
-              val tpe = parentTpe.memberType(caseField)
-              functionOnField.apply(
-                tpe,
-                caseField.name,
-                Select(valueTerm, caseField),
-                AnnotationUtils.computeFieldAnnotations(parentTpe, caseField.name)
-              )
-            }
-      }
+      parentTpe.typeSymbol.caseFields
+        .map { caseField =>
+          val fieldTpe = valueTerm.tpe.memberType(caseField)
+          functionOnField.apply(
+            fieldTpe,
+            caseField.name,
+            Select(valueTerm, caseField),
+            AnnotationUtils.computeFieldAnnotations(parentTpe, caseField.name)
+          )
+        }
     }
   }
 

@@ -131,7 +131,7 @@ object MethodUtils {
 
     targetSymbol.map { sym =>
       val selectedTpe: TypeRepr =
-        tpe.memberType(sym) match {
+        valueTerm.tpe.memberType(sym) match {
           case MethodType(_, _, res) => res
           case ByNameType(u)         => u
           case PolyType(_, _, res)   => res

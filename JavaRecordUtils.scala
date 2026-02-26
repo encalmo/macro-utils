@@ -110,7 +110,7 @@ object JavaRecordUtils {
         val accessorMethod = sym.methodMember(name).headOption.getOrElse {
           report.errorAndAbort(s"Could not find accessor method for Java Record component: $name")
         }
-        val methodType = tpe.memberType(accessorMethod)
+        val methodType = valueTerm.tpe.memberType(accessorMethod)
         val returnType: TypeRepr = methodType match {
           // Standard method: def foo(x: Int): String  => MethodType(..., String)
           case mt: MethodType => mt.resType

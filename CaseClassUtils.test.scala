@@ -9,6 +9,8 @@ class CaseClassUtilsSpec extends munit.FunSuite {
   case class Entity(name: String, @foo("bar") age: Int, emails: List[String])
   val entity = Entity("John Doe", 30, List("john.doe@example.com", "jane.doe@example.com"))
 
+  case class Example[A, B](a: A, b: B)
+
   test("visit a case class") {
     assertEquals(
       testVisitMethod(entity),
@@ -16,6 +18,17 @@ class CaseClassUtilsSpec extends munit.FunSuite {
         "name: String = John Doe",
         "@foo(name=bar)age: Int = 30",
         "emails: List[String] = List(john.doe@example.com, jane.doe@example.com)"
+      )
+    )
+  }
+
+  test("visit a generic case class") {
+    val example = Example(1, "two")
+    assertEquals(
+      testVisitMethod(example),
+      List(
+        "a: Int = 1",
+        "b: String = two"
       )
     )
   }
