@@ -21,7 +21,6 @@ object OpaqueTypeUtils {
               Some(bound)
 
             case None =>
-              report.warning(s"Found no underlying class for ${tpe.show(using Printer.TypeReprShortCode)}")
               findBaseTypeFromUnapply(tpe)
                 .orElse(
                   findBaseTypeFromApply(tpe)
@@ -128,18 +127,16 @@ object OpaqueTypeUtils {
               Some(ident.tpe.widen)
 
             case other =>
-              report.warning(s"Found unexpected method body structure: ${other.show(using Printer.TreeStructure)}")
-              /// Could not parse method body structure
+              // Could not parse method body structure
               None
           }
 
         case tree @ DefDef(_, _, _, None) =>
-          report.warning(s"Found no method body for ${tree.show(using Printer.TreeStructure)}")
+          // Cannot access source code/tree for this method
           None
 
         case other =>
-          report.warning(s"Found unexpected method body structure: ${other.show(using Printer.TreeStructure)}")
-          // Cannot access source code/tree for this method (it might be in a compiled library).
+          // Cannot access source code/tree for this method
           None
       }
     } yield underlyingType
