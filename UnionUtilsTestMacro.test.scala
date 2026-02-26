@@ -70,7 +70,7 @@ object UnionUtilsTestMacro {
       label = Some("tuple"),
       tpe = TypeRepr.of[A],
       valueTerm = valueExpr.asTerm,
-      functionWhenTuple = { (tpe, name, value, index) =>
+      functionOnItem = { (tpe, name, value, index) =>
         cache.put {
           transformToMatchTerm(
             tpe,
@@ -86,26 +86,7 @@ object UnionUtilsTestMacro {
             }
           )
         }
-      },
-      functionWhenNamedTuple = { (tpe, name, value, index) =>
-        cache.put {
-          transformToMatchTerm(
-            tpe,
-            value,
-            functionOnCase = { (tpe, value) =>
-              val messageTerm = StringUtils.concat(
-                Literal(StringConstant("named case " + name.getOrElse("unknown") + ": ")),
-                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
-                Literal(StringConstant(" => ")),
-                value
-              )
-              MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-            }
-          )
-        }
-      },
-      onStart = '{}.asTerm,
-      onEnd = '{}.asTerm
+      }
     )
 
     cache.put {

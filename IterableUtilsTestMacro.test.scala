@@ -29,7 +29,7 @@ object IterableUtilsTestMacro {
       label = Some("test"),
       tpe = TypeRepr.of[A],
       valueTerm = valueTerm,
-      functionWhenTuple = {
+      functionOnItem = {
         (tpe, name, value, index) =>
           tpe match {
             case TypeReprIsIterable(itemType) =>
@@ -46,12 +46,7 @@ object IterableUtilsTestMacro {
           }
 
         '{}
-      },
-      functionWhenNamedTuple = { (tpe, name, value, index) =>
-        '{}.asTerm
-      },
-      onStart = '{}.asTerm,
-      onEnd = '{}.asTerm
+      }
     )
 
     cache.put {

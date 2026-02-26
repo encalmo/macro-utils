@@ -18,17 +18,6 @@ class TupleUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("Collect named tuple") {
-    assertEquals(
-      testCollectMethod(namedTuple),
-      List(
-        "named tuple element name: String = John",
-        "named tuple element age: Int = 30",
-        "named tuple element email: List[String] = List(john.doe@example.com, jane.doe@example.com)"
-      )
-    )
-  }
-
   test("Collect not a tuple") {
     assertEquals(
       testCollectMethod("not a tuple"),
@@ -47,17 +36,6 @@ class TupleUtilsSpec extends munit.FunSuite {
     )
   }
 
-  test("Visit named tuple") {
-    assertEquals(
-      testVisitMethod(namedTuple),
-      List(
-        "named tuple element name: String = John",
-        "named tuple element age: Int = 30",
-        "named tuple element email: List[String] = List(john.doe@example.com, jane.doe@example.com)"
-      )
-    )
-  }
-
   test("isTuple") {
     assertEquals(testIsTuple[tuple.type], true)
     // neg
@@ -67,17 +45,6 @@ class TupleUtilsSpec extends munit.FunSuite {
     assertEquals(testIsTuple[Array[String]], false)
     assertEquals(testIsTuple[Int], false)
     assertEquals(testIsTuple[Boolean], false)
-  }
-
-  test("isNamedTuple") {
-    assertEquals(testIsNamedTuple[namedTuple.type], true)
-    // neg
-    assertEquals(testIsNamedTuple[tuple.type], false)
-    assertEquals(testIsNamedTuple[Option[String]], false)
-    assertEquals(testIsNamedTuple[List[String]], false)
-    assertEquals(testIsNamedTuple[Array[String]], false)
-    assertEquals(testIsNamedTuple[Int], false)
-    assertEquals(testIsNamedTuple[Boolean], false)
   }
 
   test("createTuple") {

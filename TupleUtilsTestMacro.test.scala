@@ -10,11 +10,6 @@ object TupleUtilsTestMacro {
     Expr(TupleUtils.isTuple[A])
   }
 
-  inline def testIsNamedTuple[A]: Boolean = ${ testIsNamedTupleImpl[A] }
-  def testIsNamedTupleImpl[A: Type](using qctx: Quotes): Expr[Boolean] = {
-    Expr(TupleUtils.isNamedTuple[A])
-  }
-
   inline def testCollectMethod[A](value: A): List[String] = {
     ${ testCollectMethodImpl[A]('{ value }) }
   }
@@ -25,7 +20,7 @@ object TupleUtilsTestMacro {
     collect[A](
       Some(Expr("tuple")),
       valueExpr,
-      functionWhenTupleExpr = { [A: Type] => Quotes ?=> (name, value, index) =>
+      functionOnItem = { [A: Type] => Quotes ?=> (name, value, index) =>
         val typeName = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
         val expr = '{
           "tuple element at " + ${ Expr(index) } + ": " + ${ Expr(typeName) } + " = " + ${
@@ -34,19 +29,7 @@ object TupleUtilsTestMacro {
         }
         buffer += expr
         '{}
-      },
-      functionWhenNamedTupleExpr = { [A: Type] => Quotes ?=> (name, value, index) =>
-        val typeName = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
-        val expr = '{
-          "named tuple element " + ${ name.getOrElse(Expr("unknown")) } + ": " + ${ Expr(typeName) } + " = " + ${
-            value
-          }.toString
-        }
-        buffer += expr
-        '{}
-      },
-      onStart = '{},
-      onEnd = '{}
+      }
     )
     Expr.ofList(buffer.toList)
   }
@@ -73,7 +56,7 @@ object TupleUtilsTestMacro {
           Some("tuple"),
           TypeRepr.of[A],
           valueExpr.asTerm,
-          functionWhenTuple = { (tpe, name, value, index) =>
+          functionOnItem = { (tpe, name, value, index) =>
             {
               cache.put {
                 val messageTerm = StringUtils.concat(
@@ -87,24 +70,7 @@ object TupleUtilsTestMacro {
                 MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
               }
             }
-          },
-          functionWhenNamedTuple = { (tpe, name, value, index) =>
-            {
-              cache.put {
-                val messageTerm = StringUtils.concat(
-                  Literal(StringConstant("named tuple element ")),
-                  Literal(StringConstant(name.getOrElse("unknown"))),
-                  Literal(StringConstant(": ")),
-                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode))),
-                  Literal(StringConstant(" = ")),
-                  StringUtils.applyToString(value)
-                )
-                MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
-              }
-            }
-          },
-          onStart = '{}.asTerm,
-          onEnd = '{}.asTerm
+          }
         )
     }
 
