@@ -40,6 +40,11 @@ object TypeNameUtils {
     val name = tpe.show(using Printer.TypeReprShortCode)
     shortBaseName(name)
 
+  def typeNameOf(using cache: StatementsCache)(tpe: cache.quotes.reflect.TypeRepr): String =
+    import cache.quotes.reflect.*
+    val name = tpe.show(using Printer.TypeReprShortCode)
+    shortBaseName(name)
+
   inline def typeNames[A]: Tuple = ${ typeNamesExpr[A] }
   def typeNamesExpr[A: Type](using Quotes): Expr[Tuple] =
     Type.of[A] match

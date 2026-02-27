@@ -26,15 +26,14 @@ object IterableUtils {
       cache: StatementsCache
   )(
       iteratorName: String,
-      tpe: cache.quotes.reflect.TypeRepr,
+      itemTpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
       functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    val itemType = tpe
-    val iterableType = TypeRepr.of[Iterable].appliedTo(itemType)
+    val iterableType = TypeRepr.of[Iterable].appliedTo(itemTpe)
 
     // FIX 1: Explicitly cast the target to Iterable[A]
     // This ensures that 'iterator' is selected from a known trait,
@@ -53,7 +52,7 @@ object IterableUtils {
     // Select from the TYPED target, not the raw target
     val iteratorTerm = Select(typedTarget, iteratorMethodSym)
 
-    val iteratorType = TypeRepr.of[Iterator].appliedTo(itemType)
+    val iteratorType = TypeRepr.of[Iterator].appliedTo(itemTpe)
 
     val iteratorSym = Symbol.newVal(
       Symbol.spliceOwner,
@@ -67,7 +66,7 @@ object IterableUtils {
 
     // 4. Build Loop Condition: it.hasNext
     val condition = Select(iteratorRef, hasNextSym)
-    val valueName = TypeNameUtils.valueNameOf(tpe)
+    val valueName = TypeNameUtils.valueNameOf(itemTpe)
 
     // 5. Build Loop Body
     val loopBody = {
@@ -77,13 +76,13 @@ object IterableUtils {
       val itemSym = Symbol.newVal(
         Symbol.spliceOwner,
         valueName + "Item",
-        itemType,
+        itemTpe,
         Flags.EmptyFlags,
         Symbol.noSymbol
       )
       val itemValDef = ValDef(itemSym, Some(nextTerm))
 
-      val userCode = functionOnItem(itemType, Ref(itemSym))
+      val userCode = functionOnItem(itemTpe, Ref(itemSym))
 
       Block(
         List(itemValDef, userCode),
@@ -100,7 +99,7 @@ object IterableUtils {
       cache: StatementsCache
   )(
       iteratorName: String,
-      tpe: cache.quotes.reflect.TypeRepr,
+      itemTpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
       functionOnItem: (
           cache.quotes.reflect.TypeRepr,
@@ -113,7 +112,6 @@ object IterableUtils {
     // 1. Determine the Item Type (T)
     // We extract T from Iterable[T] to type the loop variable correctly.
     val iterableType = Symbol.requiredClass("scala.collection.Iterable")
-    val itemType = tpe
 
     // --- Helper: Call a method, handling () vs no-args automatically ---
     def call(obj: Term, methodName: String): Term = {
@@ -148,7 +146,7 @@ object IterableUtils {
 
     // 3. Build Loop Condition: "it.hasNext"
     val condition = call(iteratorRef, "hasNext")
-    val valueName = TypeNameUtils.valueNameOf(tpe)
+    val valueName = TypeNameUtils.valueNameOf(itemTpe)
 
     // 4. Build Loop Body: "{ val x = it.next(); onItem(x) }"
     val loopBody = {
@@ -159,14 +157,14 @@ object IterableUtils {
       val itemSym = Symbol.newVal(
         Symbol.spliceOwner,
         valueName + "Item",
-        itemType,
+        itemTpe,
         Flags.EmptyFlags,
         Symbol.noSymbol
       )
       val itemValDef = ValDef(itemSym, Some(nextTerm))
 
       // C. Generate User Code
-      val userCode = functionOnItem(itemType, Ref(itemSym))
+      val userCode = functionOnItem(itemTpe, Ref(itemSym))
 
       // D. Block(val x = ..., userCode, ())
       Block(
