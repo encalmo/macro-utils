@@ -81,4 +81,27 @@ object OptionUtils {
     Match(target, List(caseSome, caseNone))
   }
 
+  def wrapInSome(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      valueTerm: cache.quotes.reflect.Term,
+      target: cache.quotes.reflect.Term
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    val someModule = Ref(defn.SomeModule)
+    val applyMethod = Select.unique(someModule, "apply")
+    val typeApplied = TypeApply(applyMethod, List(Inferred(tpe)))
+    Apply(typeApplied, List(valueTerm))
+  }
+
+  def none(using
+      cache: StatementsCache
+  ): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    Ref(defn.NoneModule)
+  }
+
 }
