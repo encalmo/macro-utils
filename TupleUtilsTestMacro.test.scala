@@ -73,7 +73,7 @@ object TupleUtilsTestMacro {
         )
     }
 
-    cache.getBlockExprOf(
+    cache.asExprOf(
       MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
     )
   }
@@ -96,6 +96,6 @@ object TupleUtilsTestMacro {
     cache.put {
       createTuple2(keyExpr.asTerm, valueExpr.asTerm)
     }
-    cache.getBlockExprOf[(A, B)]
+    cache.asExprOf[(A, B)]
   }
 }

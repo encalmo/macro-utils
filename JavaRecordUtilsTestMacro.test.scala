@@ -65,7 +65,7 @@ object JavaRecordUtilsTestMacro {
         )
     }
 
-    cache.getBlockExprOf(
+    cache.asExprOf(
       bufferRef
         .methodCall("toList", Nil)
         .methodCall("mkString", List(Literal(StringConstant(", "))))

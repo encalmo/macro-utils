@@ -48,7 +48,7 @@ object SelectableUtilsTestMacro {
       case _ => ()
     }
 
-    cache.getBlockExprOf(
+    cache.asExprOf(
       MethodUtils
         .methodCall(
           targetTerm = MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil),

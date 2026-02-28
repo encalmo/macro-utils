@@ -51,7 +51,7 @@ object CaseClassUtilsTestMacro {
         '{}
     }
 
-    cache.getBlockExprOf(
+    cache.asExprOf(
       bufferRef.methodCall("toList", Nil).asExprOf[List[String]]
     )
   }
@@ -79,7 +79,7 @@ object CaseClassUtilsTestMacro {
           )
         cache.put(term)
     )
-    cache.getBlockExprOfUnit
+    cache.asExprOfUnit
   }
 
 }

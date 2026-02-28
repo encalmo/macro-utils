@@ -28,7 +28,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   }
 
   /** Add method or value definition to statements list and index reference to the definition by provided name */
-  def declare(
+  protected def declare(
       scope: StatementsCache.Scope,
       name: String,
       definition: Any,
@@ -338,11 +338,11 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
     asTerm.asInstanceOf[outer.quotes.reflect.Term]
   }
 
-  def getBlockExprOfUnit: Expr[Unit] = {
+  def asExprOfUnit: Expr[Unit] = {
     Block(statements.toList, unit).asExprOf[Unit]
   }
 
-  def getBlockExprOf[T: Type]: Expr[T] = {
+  def asExprOf[T: Type]: Expr[T] = {
     if statements.isEmpty
     then
       report.errorAndAbort(
@@ -382,7 +382,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       }
   }
 
-  def getBlockExprOf[T: Type](returnExpr: Expr[T]): Expr[T] = {
+  def asExprOf[T: Type](returnExpr: Expr[T]): Expr[T] = {
     Block(statements.toList, returnExpr.asTerm).asExprOf[T]
   }
 

@@ -81,12 +81,11 @@ object OptionUtils {
     Match(target, List(caseSome, caseNone))
   }
 
-  def wrapInSome(using
+  def some(using
       cache: StatementsCache
   )(
       tpe: cache.quotes.reflect.TypeRepr,
-      valueTerm: cache.quotes.reflect.Term,
-      target: cache.quotes.reflect.Term
+      valueTerm: cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*

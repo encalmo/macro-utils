@@ -50,7 +50,7 @@ object NamedTupleUtilsTestMacro {
         )
     }
 
-    cache.getBlockExprOf(
+    cache.asExprOf(
       MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
     )
   }

@@ -40,7 +40,7 @@ object OpaqueUtilsTestMacro {
       }
     )
 
-    cache.getBlockExprOf[String]
+    cache.asExprOf[String]
   }
 
   inline def testFindBaseTypeFromUnapply[A]: String = {

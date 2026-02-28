@@ -108,7 +108,7 @@ object MethodUtilsTestMacro {
         }
       }
     )
-    cache.getBlockExprOfUnit
+    cache.asExprOfUnit
   }
 
   class Testy(id: String) {
@@ -138,6 +138,6 @@ object MethodUtilsTestMacro {
         List(Literal(StringConstant("foo")))
       )
     }
-    cache.getBlockExprOf[String]
+    cache.asExprOf[String]
   }
 }
