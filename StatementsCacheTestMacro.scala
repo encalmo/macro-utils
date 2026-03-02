@@ -100,4 +100,29 @@ object StatementsCacheTestMacro {
     result.asExprOf[String]
   }
 
+  inline def testCreateMethod(s: String): String = {
+    ${ testCreateMethodImpl('{ s }) }
+  }
+
+  def testCreateMethodImpl(expr: Expr[String])(using Quotes): Expr[String] = {
+    val cache: StatementsCache = new StatementsCache
+    testCreateMethod2Impl(using cache)(expr).asExprOf[String]
+  }
+
+  def testCreateMethod2Impl(using cache: StatementsCache)(expr: Expr[String]): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    cache
+      .putMethodCallOf[String](
+        "foo",
+        List("x"),
+        List(TypeRepr.of[String]),
+        List(expr.asTerm),
+        cache ?=> params => cache.put(StringUtils.concat(stringLiteral("ouch"), Ref(params.head.symbol).toTerm))
+      )
+
+    cache.asTerm
+  }
+
 }

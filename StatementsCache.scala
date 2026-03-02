@@ -101,17 +101,17 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
     }
   }
 
-  /** Lookup or create a new method of type T and return the method call */
+  /** Lookup or create a new method of type T and return the method call, if any */
   def createMethodOf[T: Type](
       methodName: String,
       parameterNames: List[String],
       parameterTypes: List[TypeRepr],
       buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
       scope: StatementsCache.Scope = Scope.Local
-  ): quotes.reflect.Term = {
+  ): Option[quotes.reflect.Term] = {
     lookupStatement(methodName) match {
       case Some(methodRef) =>
-        methodRef.asInstanceOf[quotes.reflect.Ref]
+        Some(methodRef.asInstanceOf[quotes.reflect.Ref])
 
       case None => {
 
@@ -136,28 +136,35 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
           methodSymbol,
           {
             case List(argSymbols) =>
-              Some({
+              {
                 val nested = createNestedScope(
                   "createMethodOf[" + TypeRepr.of[T].show(using Printer.TypeReprShortCode) + "]:" + methodName
                 )
                 buildMethodBody(using nested)(argSymbols.map(_.asInstanceOf[quotes.reflect.Tree]))
-                if (
-                    TypeRepr.of[T] <:< TypeRepr.of[Unit]
-                    && !(nested.typeRepr <:< nested.quotes.reflect.TypeRepr.of[Unit])
-                  )
-                then nested.put(nested.unit)
-                nested.asTerm.asInstanceOf[Term]
-              }.changeOwner(methodSymbol))
+                if nested.statements.isEmpty
+                then None
+                else {
+                  if (
+                      TypeRepr.of[T] <:< TypeRepr.of[Unit]
+                      && !(nested.typeRepr <:< nested.quotes.reflect.TypeRepr.of[Unit])
+                    )
+                  then nested.put(nested.unit)
+                  Some(nested.asTerm.asInstanceOf[Term])
+                }
+              }.map(_.changeOwner(methodSymbol))
 
             case other =>
               report.errorAndAbort("Unexpected parameter structure " + other + " for method " + methodName)
           }
         )
 
-        val methodRef = Ref(methodSymbol)
-
-        declare(scope, methodName, methodDef, methodRef)
-        methodRef
+        if methodDef.rhs.isEmpty
+        then None
+        else {
+          val methodRef = Ref(methodSymbol)
+          declare(scope, methodName, methodDef, methodRef)
+          Some(methodRef)
+        }
       }
     }
   }
@@ -173,9 +180,8 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
   ): Unit = {
     if (parameters.length != parameterNames.length)
     then report.errorAndAbort("Parameter lists must have the same length for method " + methodName)
-    val methodRef: quotes.reflect.Term =
-      createMethodOf[T](methodName, parameterNames, parameterTypes, buildMethodBody, scope)
-    put(methodRef.appliedToArgs(parameters))
+    createMethodOf[T](methodName, parameterNames, parameterTypes, buildMethodBody, scope)
+      .map(methodRef => put(methodRef.appliedToArgs(parameters)))
   }
 
   /** Lookup or create a new method of type T and add the method call to the statements list */
@@ -184,9 +190,8 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       buildMethodBody: StatementsCache ?=> Unit,
       scope: StatementsCache.Scope = Scope.Local
   ): Unit = {
-    val methodRef: quotes.reflect.Term =
-      createMethodOf[T](methodName, Nil, Nil, _ => buildMethodBody, scope)
-    put(methodRef.appliedToArgs(Nil))
+    createMethodOf[T](methodName, Nil, Nil, _ => buildMethodBody, scope)
+      .map(methodRef => put(methodRef.appliedToArgs(Nil)))
   }
 
   /** Lookup value reference by name and return the reference, otherwise abort with an error. */

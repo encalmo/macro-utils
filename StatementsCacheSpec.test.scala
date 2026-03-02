@@ -12,4 +12,9 @@ class StatementsCacheSpec extends munit.FunSuite {
     val result = testCreateEmptyNestedScope()
     assertEquals(result, "Outer!, Outer!")
   }
+
+  test("testCreateMethodOfUnit") {
+    val result = testCreateMethod("_foo")
+    assertEquals(result, "ouch_foo")
+  }
 }
