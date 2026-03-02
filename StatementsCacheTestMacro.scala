@@ -23,18 +23,20 @@ object StatementsCacheTestMacro {
 
     val nested = cache.createNestedScope()
     nested.putMethodCallOf[Unit](
-      "foo",
-      List("x"),
-      List(nested.quotes.reflect.TypeRepr.of[String]),
-      List(nested.stringLiteral("ouch")),
-      methodBody ?=>
+      methodName = "foo",
+      parameterNames = List("x"),
+      parameterTypes = List(nested.quotes.reflect.TypeRepr.of[String]),
+      parameters = List(nested.stringLiteral("ouch")),
+      minMethodLinesCount = 2,
+      buildMethodBody = methodBody ?=>
         arguments => {
           methodBody.putMethodCallOf[Unit](
-            "bar",
-            List("y"),
-            List(methodBody.quotes.reflect.TypeRepr.of[String]),
-            List(methodBody.stringLiteral("puff")),
-            methodBody2 ?=>
+            methodName = "bar",
+            parameterNames = List("y"),
+            parameterTypes = List(methodBody.quotes.reflect.TypeRepr.of[String]),
+            parameters = List(methodBody.stringLiteral("puff")),
+            minMethodLinesCount = 2,
+            buildMethodBody = methodBody2 ?=>
               arguments2 => {
                 methodBody2.put(
                   nested
@@ -85,8 +87,9 @@ object StatementsCacheTestMacro {
 
     val nested = cache.createNestedScope()
     nested.putParamlessMethodCallOf[Unit](
-      "foo",
-      methodBody ?=> (),
+      methodName = "foo",
+      minMethodLinesCount = 2,
+      buildMethodBody = methodBody ?=> (),
       scope = StatementsCache.Scope.Local
     )
 
@@ -106,7 +109,10 @@ object StatementsCacheTestMacro {
 
   def testCreateMethodImpl(expr: Expr[String])(using Quotes): Expr[String] = {
     val cache: StatementsCache = new StatementsCache
-    testCreateMethod2Impl(using cache)(expr).asExprOf[String]
+    val term = testCreateMethod2Impl(using cache)(expr)
+    // import cache.quotes.reflect.*
+    // report.info(term.show(using Printer.TreeCode))
+    term.asExprOf[String]
   }
 
   def testCreateMethod2Impl(using cache: StatementsCache)(expr: Expr[String]): cache.quotes.reflect.Term = {
@@ -115,11 +121,70 @@ object StatementsCacheTestMacro {
 
     cache
       .putMethodCallOf[String](
-        "foo",
-        List("x"),
-        List(TypeRepr.of[String]),
-        List(expr.asTerm),
-        cache ?=> params => cache.put(StringUtils.concat(stringLiteral("ouch"), Ref(params.head.symbol).toTerm))
+        methodName = "foo",
+        parameterNames = List("x"),
+        parameterTypes = List(TypeRepr.of[String]),
+        parameters = List(expr.asTerm),
+        minMethodLinesCount = 2,
+        buildMethodBody = cache ?=>
+          params =>
+            cache.put(
+              StringUtils.concat(
+                stringLiteral("ouch"),
+                params.headOption.match {
+                  case Some(term: Term)  => term.toTerm
+                  case Some(param: Tree) => Ref(param.symbol).toTerm
+                  case None              => unit
+
+                }
+              )
+            ),
+        scope = StatementsCache.Scope.Local
+      )
+
+    cache.asTerm
+  }
+
+  inline def testCreateLargeMethod(s: String): String = {
+    ${ testCreateLargeMethodImpl('{ s }) }
+  }
+
+  def testCreateLargeMethodImpl(expr: Expr[String])(using Quotes): Expr[String] = {
+    val cache: StatementsCache = new StatementsCache
+    val term = testCreateLargeMethod2Impl(using cache)(expr)
+    // import cache.quotes.reflect.*
+    // report.info(term.show(using Printer.TreeCode))
+    term.asExprOf[String]
+  }
+
+  def testCreateLargeMethod2Impl(using cache: StatementsCache)(expr: Expr[String]): cache.quotes.reflect.Term = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    cache
+      .putMethodCallOf[String](
+        methodName = "foo",
+        parameterNames = List("x"),
+        parameterTypes = List(TypeRepr.of[String]),
+        parameters = List(expr.asTerm),
+        minMethodLinesCount = 10,
+        buildMethodBody = cache ?=>
+          params =>
+            1 to 10 foreach { i =>
+              cache.put(
+                StringUtils.concat(
+                  stringLiteral("ouch"),
+                  params.headOption.match {
+                    case Some(term: Term)  => term.toTerm
+                    case Some(param: Tree) => Ref(param.symbol).toTerm
+                    case None              => unit
+
+                  },
+                  stringLiteral(i.toString)
+                )
+              )
+            },
+        scope = StatementsCache.Scope.Local
       )
 
     cache.asTerm

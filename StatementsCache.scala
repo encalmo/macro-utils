@@ -106,12 +106,13 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       methodName: String,
       parameterNames: List[String],
       parameterTypes: List[TypeRepr],
+      minMethodLinesCount: Int, // inline method body if it is smaller than this size
       buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
       scope: StatementsCache.Scope = Scope.Local
-  ): Option[quotes.reflect.Term] = {
+  ): Either[Boolean, quotes.reflect.Ref] = {
     lookupStatement(methodName) match {
       case Some(methodRef) =>
-        Some(methodRef.asInstanceOf[quotes.reflect.Ref])
+        Right(methodRef.asInstanceOf[quotes.reflect.Ref])
 
       case None => {
 
@@ -158,14 +159,54 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
           }
         )
 
-        if methodDef.rhs.isEmpty
-        then None
-        else {
-          val methodRef = Ref(methodSymbol)
-          declare(scope, methodName, methodDef, methodRef)
-          Some(methodRef)
+        methodDef.rhs.match {
+          case None      => Left(false)
+          case Some(rhs) =>
+            val exceedsMinMethodLinesCount = {
+              val it = rhs.show(using Printer.TreeCode).linesIterator
+              scala.util.boundary {
+                var count = 0
+                while (it.hasNext) {
+                  it.next()
+                  count += 1
+                  if count >= minMethodLinesCount then scala.util.boundary.break(true)
+                }
+                false
+              }
+            }
+            if exceedsMinMethodLinesCount
+            then {
+              val methodRef = Ref(methodSymbol)
+              declare(scope, methodName, methodDef, methodRef)
+              Right(methodRef)
+            } else Left(true)
         }
       }
+    }
+  }
+
+  def inlineMethodBody(parameters: List[Term], buildMethodBody: StatementsCache ?=> List[Tree] => Unit): Unit = {
+    val nested = createNestedScope("inlineMethodBody")
+    buildMethodBody(using nested)(parameters)
+    put(nested.asTerm.asInstanceOf[Term])
+  }
+
+  /** Lookup or create a new method of type T and add the method call to the statements list */
+  def putMethodCallOf[T: Type](
+      methodName: String,
+      parameterNames: List[String],
+      parameterTypes: List[TypeRepr],
+      parameters: List[Term],
+      minMethodLinesCount: Int,
+      buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
+      scope: StatementsCache.Scope
+  ): Unit = {
+    if (parameters.length != parameterNames.length)
+    then report.errorAndAbort("Parameter lists must have the same length for method " + methodName)
+    createMethodOf[T](methodName, parameterNames, parameterTypes, minMethodLinesCount, buildMethodBody, scope).match {
+      case Right(methodRef) => put(methodRef.appliedToArgs(parameters))
+      case Left(nonEmpty)   =>
+        if nonEmpty then inlineMethodBody(parameters, buildMethodBody)
     }
   }
 
@@ -177,11 +218,28 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       parameters: List[Term],
       buildMethodBody: StatementsCache ?=> List[Tree] => Unit,
       scope: StatementsCache.Scope = Scope.Local
+  ): Unit = putMethodCallOf[T](
+    methodName = methodName,
+    parameterNames = parameterNames,
+    parameterTypes = parameterTypes,
+    parameters = parameters,
+    minMethodLinesCount = 4,
+    buildMethodBody = buildMethodBody,
+    scope = scope
+  )
+
+  /** Lookup or create a new method of type T and add the method call to the statements list */
+  def putParamlessMethodCallOf[T: Type](
+      methodName: String,
+      minMethodLinesCount: Int,
+      buildMethodBody: StatementsCache ?=> Unit,
+      scope: StatementsCache.Scope
   ): Unit = {
-    if (parameters.length != parameterNames.length)
-    then report.errorAndAbort("Parameter lists must have the same length for method " + methodName)
-    createMethodOf[T](methodName, parameterNames, parameterTypes, buildMethodBody, scope)
-      .map(methodRef => put(methodRef.appliedToArgs(parameters)))
+    createMethodOf[T](methodName, Nil, Nil, minMethodLinesCount, _ => buildMethodBody, scope).match {
+      case Right(methodRef) => put(methodRef.appliedToArgs(Nil))
+      case Left(nonEmpty)   =>
+        if nonEmpty then inlineMethodBody(Nil, _ => buildMethodBody)
+    }
   }
 
   /** Lookup or create a new method of type T and add the method call to the statements list */
@@ -189,10 +247,13 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       methodName: String,
       buildMethodBody: StatementsCache ?=> Unit,
       scope: StatementsCache.Scope = Scope.Local
-  ): Unit = {
-    createMethodOf[T](methodName, Nil, Nil, _ => buildMethodBody, scope)
-      .map(methodRef => put(methodRef.appliedToArgs(Nil)))
-  }
+  ): Unit =
+    putParamlessMethodCallOf[T](
+      methodName = methodName,
+      minMethodLinesCount = 4,
+      buildMethodBody = buildMethodBody,
+      scope = scope
+    )
 
   /** Lookup value reference by name and return the reference, otherwise abort with an error. */
   def getValueRef(valueName: String): quotes.reflect.Ref = {

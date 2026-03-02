@@ -83,30 +83,34 @@ object MethodUtilsTestMacro {
   )(using Quotes): Expr[Unit] = {
     val cache = new StatementsCache
     cache.putMethodCallOf[Unit](
-      methodNameExpr.valueOrAbort,
-      Nil,
-      Nil,
-      Nil,
-      { (nested: StatementsCache) ?=> arguments =>
+      methodName = methodNameExpr.valueOrAbort,
+      parameterNames = Nil,
+      parameterTypes = Nil,
+      parameters = Nil,
+      minMethodLinesCount = 2,
+      buildMethodBody = { (nested: StatementsCache) ?=> arguments =>
         import nested.quotes.reflect.*
         nested.put {
           MethodUtils
             .callPrintln(using nested)(Literal(StringConstant("Hello World!")))
         }
-      }
+      },
+      scope = StatementsCache.Scope.Local
     )
     cache.putMethodCallOf[Unit](
-      methodNameExpr.valueOrAbort,
-      Nil,
-      Nil,
-      Nil,
-      { (nested: StatementsCache) ?=> arguments =>
+      methodName = methodNameExpr.valueOrAbort,
+      parameterNames = Nil,
+      parameterTypes = Nil,
+      parameters = Nil,
+      minMethodLinesCount = 2,
+      buildMethodBody = { (nested: StatementsCache) ?=> arguments =>
         import nested.quotes.reflect.*
         nested.put {
           MethodUtils
             .callPrintln(using nested)(Literal(StringConstant("Hello World!")))
         }
-      }
+      },
+      scope = StatementsCache.Scope.Local
     )
     cache.asExprOfUnit
   }
@@ -133,9 +137,9 @@ object MethodUtilsTestMacro {
     import cache.quotes.reflect.*
     cache.put {
       testyTerm.methodCall(
-        "foo",
-        List(Literal(IntConstant(1)), Literal(IntConstant(2))),
-        List(Literal(StringConstant("foo")))
+        methodName = "foo",
+        args = List(Literal(IntConstant(1)), Literal(IntConstant(2))),
+        moreArgs = List(Literal(StringConstant("foo")))
       )
     }
     cache.asExprOf[String]
