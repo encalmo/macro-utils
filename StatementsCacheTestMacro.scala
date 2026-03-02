@@ -145,19 +145,21 @@ object StatementsCacheTestMacro {
     cache.asTerm
   }
 
-  inline def testCreateLargeMethod(s: String): String = {
-    ${ testCreateLargeMethodImpl('{ s }) }
+  inline def testCreateLargeMethod(s: String, inline size: Int): String = {
+    ${ testCreateLargeMethodImpl('{ s }, '{ size }) }
   }
 
-  def testCreateLargeMethodImpl(expr: Expr[String])(using Quotes): Expr[String] = {
+  def testCreateLargeMethodImpl(expr: Expr[String], sizeExpr: Expr[Int])(using Quotes): Expr[String] = {
     val cache: StatementsCache = new StatementsCache
-    val term = testCreateLargeMethod2Impl(using cache)(expr)
+    val term = testCreateLargeMethod2Impl(using cache)(expr, sizeExpr.valueOrAbort)
     // import cache.quotes.reflect.*
     // report.info(term.show(using Printer.TreeCode))
     term.asExprOf[String]
   }
 
-  def testCreateLargeMethod2Impl(using cache: StatementsCache)(expr: Expr[String]): cache.quotes.reflect.Term = {
+  def testCreateLargeMethod2Impl(using
+      cache: StatementsCache
+  )(expr: Expr[String], minMethodLinesCount: Int): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
@@ -167,7 +169,7 @@ object StatementsCacheTestMacro {
         parameterNames = List("x"),
         parameterTypes = List(TypeRepr.of[String]),
         parameters = List(expr.asTerm),
-        minMethodLinesCount = 10,
+        minMethodLinesCount = minMethodLinesCount,
         buildMethodBody = cache ?=>
           params =>
             1 to 10 foreach { i =>

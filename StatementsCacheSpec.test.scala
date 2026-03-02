@@ -19,7 +19,12 @@ class StatementsCacheSpec extends munit.FunSuite {
   }
 
   test("testCreateLargeMethod") {
-    val result = testCreateLargeMethod(".foo")
+    val result = testCreateLargeMethod(".foo", 10)
+    assertEquals(result, "ouch.foo10")
+  }
+
+  test("testCreateLargeMethod 2") {
+    val result = testCreateLargeMethod(".foo", 13)
     assertEquals(result, "ouch.foo10")
   }
 }

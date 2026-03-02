@@ -163,13 +163,16 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
           case None      => Left(false)
           case Some(rhs) =>
             val exceedsMinMethodLinesCount = {
-              val it = rhs.show(using Printer.TreeCode).linesIterator
+              val code = rhs.show(using Printer.TreeCode)
+              val it = code.linesIterator
               scala.util.boundary {
                 var count = 0
                 while (it.hasNext) {
                   it.next()
                   count += 1
-                  if count >= minMethodLinesCount then scala.util.boundary.break(true)
+                  if count >= minMethodLinesCount then {
+                    scala.util.boundary.break(true)
+                  }
                 }
                 false
               }
