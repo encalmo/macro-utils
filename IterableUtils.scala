@@ -28,7 +28,11 @@ object IterableUtils {
       iteratorName: String,
       itemTpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          cache.quotes.reflect.Term, // iterator term
+          cache.quotes.reflect.Term // index term
+      ) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -48,7 +52,7 @@ object IterableUtils {
     val hasNextSym = iteratorClass.methodMember("hasNext").head
     val nextSym = iteratorClass.methodMember("next").head
 
-    // 3. Create Iterator Variable
+    // 3a. Create Iterator Variable
     // Select from the TYPED target, not the raw target
     val iteratorTerm = Select(typedTarget, iteratorMethodSym)
 
@@ -63,6 +67,18 @@ object IterableUtils {
     )
     val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))
     val iteratorRef = Ref(iteratorSym)
+
+    // 3b. Create Index Variable: "var i = 0"
+    val indexTerm = Literal(IntConstant(0))
+    val indexSym = Symbol.newVal(
+      Symbol.spliceOwner,
+      iteratorName + "Index",
+      TypeRepr.of[Int],
+      Flags.Mutable,
+      Symbol.noSymbol
+    )
+    val indexValDef = ValDef(indexSym, Some(indexTerm))
+    val indexRef = Ref(indexSym)
 
     // 4. Build Loop Condition: it.hasNext
     val condition = Select(iteratorRef, hasNextSym)
@@ -82,17 +98,29 @@ object IterableUtils {
       )
       val itemValDef = ValDef(itemSym, Some(nextTerm))
 
-      val userCode = functionOnItem(itemTpe, Ref(itemSym))
+      val userCode = functionOnItem(itemTpe, Ref(itemSym), indexRef)
+
+      val plusSym = defn.IntClass
+        .methodMember("+")
+        .find { sym =>
+          sym.signature.paramSigs match {
+            case List("I") | List("scala.Int") => true
+            case _                             => false
+          }
+        }
+        .getOrElse(defn.IntClass.methodMember("+").head)
+
+      val incrementIndex = Assign(indexRef, Apply(Select(indexRef, plusSym), List(Literal(IntConstant(1)))))
 
       Block(
         List(itemValDef, userCode),
-        Literal(UnitConstant())
+        incrementIndex
       )
     }
 
     // 6. Return Block
     val whileTerm = While(condition, loopBody)
-    Block(List(iteratorValDef), whileTerm)
+    Block(List(iteratorValDef, indexValDef), whileTerm)
   }
 
   def buildIterableLoop2(using
@@ -144,6 +172,18 @@ object IterableUtils {
     val iteratorValDef = ValDef(iteratorSym, Some(iteratorTerm))
     val iteratorRef = Ref(iteratorSym)
 
+    // 2a. Create Index Variable: "var i = 0"
+    val indexTerm = Literal(IntConstant(0))
+    val indexSym = Symbol.newVal(
+      Symbol.spliceOwner,
+      iteratorName + "Index",
+      TypeRepr.of[Int],
+      Flags.Mutable,
+      Symbol.noSymbol
+    )
+    val indexValDef = ValDef(indexSym, Some(indexTerm))
+    val indexRef = Ref(indexSym)
+
     // 3. Build Loop Condition: "it.hasNext"
     val condition = call(iteratorRef, "hasNext")
     val valueName = TypeNameUtils.valueNameOf(itemTpe)
@@ -166,10 +206,23 @@ object IterableUtils {
       // C. Generate User Code
       val userCode = functionOnItem(itemTpe, Ref(itemSym))
 
-      // D. Block(val x = ..., userCode, ())
+      // D. Increment Index: i = i + 1
+      val plusSym = defn.IntClass
+        .methodMember("+")
+        .find { sym =>
+          sym.signature.paramSigs match {
+            case List("I") | List("scala.Int") => true
+            case _                             => false
+          }
+        }
+        .getOrElse(defn.IntClass.methodMember("+").head)
+
+      val incrementIndex = Assign(indexRef, Apply(Select(indexRef, plusSym), List(Literal(IntConstant(1)))))
+
+      // E. Block(val x = ..., userCode, i = i + 1)
       Block(
         List(itemValDef, userCode),
-        Literal(UnitConstant())
+        incrementIndex
       )
     }
 
@@ -177,7 +230,7 @@ object IterableUtils {
     val whileTerm = While(condition, loopBody)
 
     // 6. Return Block(val it = ..., while(...))
-    Block(List(iteratorValDef), whileTerm)
+    Block(List(iteratorValDef, indexValDef), whileTerm)
   }
 
   /** Create a static list from a list of terms. */

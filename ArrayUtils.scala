@@ -27,7 +27,11 @@ object ArrayUtils {
       arrayNamePrefix: String,
       tpe: cache.quotes.reflect.TypeRepr,
       target: cache.quotes.reflect.Term,
-      functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          cache.quotes.reflect.Term, // item term
+          cache.quotes.reflect.Term // index term
+      ) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -78,7 +82,7 @@ object ArrayUtils {
       val itemValDef = ValDef(itemSym, Some(itemTerm))
 
       // B. User Logic
-      val userCode = functionOnItem(tpe, Ref(itemSym))
+      val userCode = functionOnItem(tpe, Ref(itemSym), indexRef)
 
       // C. Increment: i = i + 1
       // Note: Int.+ also has overloads, but usually Int is the default.

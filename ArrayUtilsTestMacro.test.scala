@@ -30,8 +30,17 @@ object ArrayUtilsTestMacro {
             TypeNameUtils.valueNameOf(tpe),
             tpe,
             valueTerm,
-            functionOnItem = { (tpe, term) =>
-              bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+            functionOnItem = { (tpe, valueTerm, indexTerm) =>
+              bufferRef.methodCall(
+                "append",
+                List(
+                  StringUtils.concat(
+                    StringUtils.applyToString(valueTerm),
+                    Literal(StringConstant(" at ")),
+                    StringUtils.applyToString(indexTerm)
+                  )
+                )
+              )
             }
           )
         }

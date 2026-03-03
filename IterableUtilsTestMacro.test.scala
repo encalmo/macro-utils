@@ -37,8 +37,17 @@ object IterableUtilsTestMacro {
                   "testIterator_" + index,
                   itemType,
                   value,
-                  functionOnItem = { (tpe, term) =>
-                    bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+                  functionOnItem = { (tpe, valueTerm, indexTerm) =>
+                    bufferRef.methodCall(
+                      "append",
+                      List(
+                        StringUtils.concat(
+                          StringUtils.applyToString(valueTerm),
+                          Literal(StringConstant(" at ")),
+                          StringUtils.applyToString(indexTerm)
+                        )
+                      )
+                    )
                   }
                 )
               }
@@ -53,7 +62,7 @@ object IterableUtilsTestMacro {
     }
 
     val result = cache.asTerm
-    // report.warning(result.show(using Printer.TreeCode))
+    // report.info(result.show(using Printer.TreeCode))
     result.asExprOf[String]
   }
 

@@ -27,8 +27,17 @@ object JavaIterableTestMacro {
             TypeNameUtils.valueNameOf(tpe),
             tpe,
             valueExpr.asTerm,
-            functionOnItem = { (tpe, term) =>
-              bufferRef.methodCall("append", List(StringUtils.applyToString(term)))
+            functionOnItem = { (tpe, valueTerm, indexTerm) =>
+              bufferRef.methodCall(
+                "append",
+                List(
+                  StringUtils.concat(
+                    StringUtils.applyToString(valueTerm),
+                    Literal(StringConstant(" at ")),
+                    StringUtils.applyToString(indexTerm)
+                  )
+                )
+              )
             }
           )
         )

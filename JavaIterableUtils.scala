@@ -49,7 +49,11 @@ object JavaIterableUtils {
       iteratorName: String,
       tpe: cache.quotes.reflect.TypeRepr, // The Item Type (e.g. Integer)
       target: cache.quotes.reflect.Term, // The Collection Term
-      functionOnItem: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => cache.quotes.reflect.Term
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          cache.quotes.reflect.Term, // iterator term
+          cache.quotes.reflect.Term // index term
+      ) => cache.quotes.reflect.Term
   ): cache.quotes.reflect.Term = {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
@@ -68,7 +72,7 @@ object JavaIterableUtils {
     val iterableType = javaIterableSym.typeRef.appliedTo(tpe)
     val typedTarget = Typed(target, Inferred(iterableType))
 
-    // 3. Create Iterator Variable
+    // 3a. Create Iterator Variable
     // val it: java.util.Iterator[T] = ...
     val iteratorType = javaIteratorSym.typeRef.appliedTo(tpe)
 
@@ -84,6 +88,18 @@ object JavaIterableUtils {
     )
     val iteratorVal = ValDef(iteratorSym, Some(iteratorCall))
     val iteratorRef = Ref(iteratorSym)
+
+    // 3b. Create Index Variable: "var i = 0"
+    val indexTerm = Literal(IntConstant(0))
+    val indexSym = Symbol.newVal(
+      Symbol.spliceOwner,
+      iteratorName + "Index",
+      TypeRepr.of[Int],
+      Flags.Mutable,
+      Symbol.noSymbol
+    )
+    val indexValDef = ValDef(indexSym, Some(indexTerm))
+    val indexRef = Ref(indexSym)
 
     // 4. Loop Condition: it.hasNext()
     val condition = Apply(Select(iteratorRef, hasNextMethod), Nil)
@@ -102,16 +118,28 @@ object JavaIterableUtils {
       )
       val itemVal = ValDef(itemSym, Some(nextCall))
 
-      val userCode = functionOnItem(tpe, Ref(itemSym))
+      val userCode = functionOnItem(tpe, Ref(itemSym), indexRef)
+
+      val plusSym = defn.IntClass
+        .methodMember("+")
+        .find { sym =>
+          sym.signature.paramSigs match {
+            case List("I") | List("scala.Int") => true
+            case _                             => false
+          }
+        }
+        .getOrElse(defn.IntClass.methodMember("+").head)
+
+      val incrementIndex = Assign(indexRef, Apply(Select(indexRef, plusSym), List(Literal(IntConstant(1)))))
 
       Block(
         List(itemVal, userCode),
-        Literal(UnitConstant())
+        incrementIndex
       )
     }
 
     Block(
-      List(iteratorVal),
+      List(iteratorVal, indexValDef),
       While(condition, loopBody)
     )
   }
