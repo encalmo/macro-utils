@@ -11,6 +11,7 @@ object TypeUtils {
       // 1. Dealias to handle "type MyInt = Int"
       val d = tpe.dealias
       d =:= TypeRepr.of[String] ||
+      d =:= TypeRepr.of[java.lang.String] ||
       // 2. Check Standard Primitives
       // We check against the TypeRepr of the standard types
       d =:= TypeRepr.of[Boolean] ||
@@ -21,6 +22,14 @@ object TypeUtils {
       d =:= TypeRepr.of[Float] ||
       d =:= TypeRepr.of[Double] ||
       d =:= TypeRepr.of[Char] ||
+      d =:= TypeRepr.of[java.lang.Boolean] ||
+      d =:= TypeRepr.of[java.lang.Byte] ||
+      d =:= TypeRepr.of[java.lang.Short] ||
+      d =:= TypeRepr.of[java.lang.Integer] ||
+      d =:= TypeRepr.of[java.lang.Long] ||
+      d =:= TypeRepr.of[java.lang.Float] ||
+      d =:= TypeRepr.of[java.lang.Double] ||
+      d =:= TypeRepr.of[java.lang.Character] ||
       // 3. Check Big Numbers (Scala & Java)
       d =:= TypeRepr.of[BigDecimal] ||
       d =:= TypeRepr.of[java.math.BigDecimal]
