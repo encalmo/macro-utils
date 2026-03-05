@@ -183,6 +183,85 @@ object TupleUtils {
     }
   }
 
+  /** Visit a named tuple using a statements cache without the value term.
+    *
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          Int
+      ) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    tpe.asType match {
+      case '[head *: tail] =>
+        val (headTpe, tailTpes) =
+          tpe match {
+            // Case 1: Standard Tuple2, Tuple3, etc.
+            // (Union, Union) is represented as AppliedType(Tuple2, List(Union, Union))
+            case AppliedType(tpe, args) if tpe.typeSymbol.name.startsWith("Tuple") =>
+              (args.head, args.tail)
+
+            // Case 2: Recursive Cons (*:) structure
+            // head *: tail is AppliedType(*:, List(head, tail))
+            case AppliedType(tycon, head :: tail :: Nil) if tycon.typeSymbol.name == "*:" =>
+              (head, TypeUtils.tupleTypeToTypeList[tail])
+
+            case _ =>
+              (TypeRepr.of[head], TypeUtils.tupleTypeToTypeList[tail])
+          }
+
+        visitTupleTermless(tpe, headTpe, tailTpes, functionOnItem, 0)
+
+      case _ => ()
+    }
+  }
+
+  private def visitTupleTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      headTpe: cache.quotes.reflect.TypeRepr,
+      tailTpes: List[cache.quotes.reflect.TypeRepr],
+      functionOnItem: (
+          cache.quotes.reflect.TypeRepr,
+          Int
+      ) => Unit,
+      n: Int
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+
+    headTpe.asType match {
+      case '[head] =>
+        functionOnItem(
+          headTpe,
+          n
+        )
+    }
+
+    tailTpes match {
+      case headTpe2 :: tailTpes2 =>
+        visitTupleTermless(
+          tpe,
+          headTpe2,
+          tailTpes2,
+          functionOnItem,
+          n + 1
+        )
+      case Nil =>
+        ()
+    }
+  }
+
   def createTuple2(using
       cache: StatementsCache
   )(

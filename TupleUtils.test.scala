@@ -36,6 +36,17 @@ class TupleUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("Visit ordinary tuple without value term") {
+    assertEquals(
+      testVisitTermlessMethod[tuple.type],
+      List(
+        "tuple element at 0: Int",
+        "tuple element at 1: String",
+        "tuple element at 2: List[Double]"
+      )
+    )
+  }
+
   test("isTuple") {
     assertEquals(testIsTuple[tuple.type], true)
     // neg

@@ -1,6 +1,6 @@
 //> using scala 3.7.4
 //> using exclude scripts
-//> using test.dep org.scalameta::munit:1.2.3
+//> using test.dep org.scalameta::munit:1.2.4
 //> using publish.organization "org.encalmo"
 //> using publish.name "macro-utils"
 //> using publish.url "https://github.com/encalmo/macro-utils"

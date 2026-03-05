@@ -29,7 +29,6 @@ object NamedTupleUtilsTestMacro {
       case TypeReprIsNamedTuple() =>
 
         visit(
-          Some("tuple"),
           TypeRepr.of[A],
           valueExpr.asTerm,
           functionOnField = { (tpe, name, value, index) =>
@@ -63,7 +62,6 @@ object NamedTupleUtilsTestMacro {
     import quotes.reflect.*
     val buffer = collection.mutable.ListBuffer.empty[Expr[String]]
     collect[A](
-      Some(Expr("tuple")),
       valueExpr,
       functionOnField = { [A: Type] => Quotes ?=> (name, value, index) =>
         val typeName = TypeRepr.of[A].show(using Printer.TypeReprShortCode)
@@ -77,6 +75,46 @@ object NamedTupleUtilsTestMacro {
       }
     )
     Expr.ofList(buffer.toList)
+  }
+
+  inline def testVisitTermlessMethod[A]: List[String] = {
+    ${ testVisitTermlessMethodImpl[A] }
+  }
+
+  def testVisitTermlessMethodImpl[A: Type](using Quotes): Expr[List[String]] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitTermlessMethod2Impl[A]
+  }
+
+  def testVisitTermlessMethod2Impl[A: Type](using cache: StatementsCache): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+    val tpe = TypeRepr.of[A].dealias
+    tpe match {
+      case TypeReprIsNamedTuple() =>
+        NamedTupleUtils.visitTermless(
+          tpe,
+          functionOnField = { (tpe, name, index) =>
+            {
+              cache.put {
+                val messageTerm = StringUtils.concat(
+                  Literal(StringConstant("named tuple element ")),
+                  Literal(StringConstant(name)),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+                )
+                MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+              }
+            }
+          }
+        )
+    }
+
+    cache.asExprOf(
+      MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
+    )
   }
 
 }

@@ -19,6 +19,13 @@ class OpaqueTypeUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("visit opaque type with an upper bound - DriverLicense - without value term") {
+    assertEquals(
+      testVisitTermless[DriverLicense],
+      "opaque type with an upper bound of Document"
+    )
+  }
+
   test("visit opaque type with an upper bound - DriverLicense") {
     assertEquals(
       testVisit(skills),
@@ -36,6 +43,13 @@ class OpaqueTypeUtilsSpec extends munit.FunSuite {
   test("visit opaque type with an apply method - FishingLicense") {
     assertEquals(
       testVisit(fishingLicense),
+      "opaque type with an upper bound of Document"
+    )
+  }
+
+  test("visit opaque type with an apply method - FishingLicense - without value term") {
+    assertEquals(
+      testVisitTermless[FishingLicense],
       "opaque type with an upper bound of Document"
     )
   }

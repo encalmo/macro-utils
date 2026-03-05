@@ -169,19 +169,37 @@ object OpaqueTypeUtils {
     TypeUtils
       .underlyingTypeRepr(tpe)
       .match {
-        case Left((tpe)) =>
-          functionWhenOpaqueType(
-            tpe,
-            label,
-            valueTerm
-          )
+        case Left((tpe)) => functionWhenOpaqueType(tpe, label, valueTerm)
+        case _           => functionOtherwise(tpe, label, valueTerm)
+      }
+  }
 
-        case _ =>
-          functionOtherwise(
-            tpe,
-            label,
-            valueTerm
-          )
+  /** Visit an opaque type and apply a dedicated function when the type is an opaque type or when the type is not an
+    * opaque type without the value term.
+    *
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      label: String,
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionWhenOpaqueType: (
+          cache.quotes.reflect.TypeRepr,
+          String
+      ) => Unit,
+      functionOtherwise: (cache.quotes.reflect.TypeRepr, String) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+
+    TypeUtils
+      .underlyingTypeRepr(tpe)
+      .match {
+        case Left((tpe)) => functionWhenOpaqueType(tpe, label)
+        case _           => functionOtherwise(tpe, label)
       }
   }
 

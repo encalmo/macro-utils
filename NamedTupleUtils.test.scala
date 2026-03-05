@@ -18,6 +18,17 @@ class NamedTupleUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("Visit named tuple without value term") {
+    assertEquals(
+      testVisitTermlessMethod[namedTuple.type],
+      List(
+        "named tuple element name: String",
+        "named tuple element age: Int",
+        "named tuple element email: List[String]"
+      )
+    )
+  }
+
   test("Collect named tuple") {
     assertEquals(
       testCollectMethod(namedTuple),

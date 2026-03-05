@@ -36,4 +36,11 @@ class JavaRecordUtilsSpec extends munit.FunSuite {
       "id: String = 1234567890, customerId: String = John Doe, items: List[Integer] = [100, 200, 300], total: BigDecimal = 1000"
     )
   }
+
+  test("visit record without value term") {
+    assertEquals(
+      testVisitTermlessMethod[Order],
+      "id: String, customerId: String, items: List[Integer], total: BigDecimal"
+    )
+  }
 }

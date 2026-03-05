@@ -72,4 +72,45 @@ object JavaRecordUtilsTestMacro {
         .asExprOf[String]
     )
   }
+
+  inline def testVisitTermlessMethod[A]: String = {
+    ${ testVisitTermlessMethodImpl[A] }
+  }
+
+  def testVisitTermlessMethodImpl[A: Type](using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitTermlessMethod2Impl[A]
+  }
+
+  def testVisitTermlessMethod2Impl[A: Type](using cache: StatementsCache): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    TypeRepr.of[A] match {
+      case TypeReprIsJavaRecord() =>
+
+        JavaRecordUtils.visitTermless(
+          TypeRepr.of[A],
+          functionOnField = { (tpe, name) =>
+            cache.put {
+              val messageTerm = StringUtils.concat(
+                Literal(StringConstant(name)),
+                Literal(StringConstant(": ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+              )
+              MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+            }
+          }
+        )
+    }
+
+    cache.asExprOf(
+      bufferRef
+        .methodCall("toList", Nil)
+        .methodCall("mkString", List(Literal(StringConstant(", "))))
+        .asExprOf[String]
+    )
+  }
 }

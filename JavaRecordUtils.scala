@@ -133,4 +133,59 @@ object JavaRecordUtils {
       }
     }
   }
+
+  /** Visit a Java record type and collect the results into a block of unit without the value term.
+    *
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionOnField: (cache.quotes.reflect.TypeRepr, String) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val sym = tpe.typeSymbol
+    val recordType = TypeRepr.typeConstructorOf(classOf[java.lang.Record])
+
+    if (!(tpe <:< recordType)) then '{}
+    else {
+      val primaryCtor = sym.primaryConstructor
+      if (primaryCtor.isNoSymbol) {
+        report.errorAndAbort("Could not find Java Record primary constructor")
+      }
+      val components = primaryCtor.paramSymss.headOption.getOrElse(Nil)
+
+      components.foreach { paramSym =>
+        val name = paramSym.name
+        val accessorMethod = sym.methodMember(name).headOption.getOrElse {
+          report.errorAndAbort(s"Could not find accessor method for Java Record component: $name")
+        }
+        val methodType = tpe.memberType(accessorMethod)
+        val returnType: TypeRepr = methodType match {
+          // Standard method: def foo(x: Int): String  => MethodType(..., String)
+          case mt: MethodType => mt.resType
+          // Generic method: def foo[A]: A => PolyType
+          case pt: PolyType =>
+            pt.resType match {
+              case mt: MethodType => mt.resType // Unpack the underlying method
+              case other          => other
+            }
+          // Parameterless method (in some contexts) or ByName
+          case byName: ByNameType => byName.underlying
+          // Fallback (e.g. it was already a value type)
+          case other => other
+        }
+        returnType.asType match {
+          case '[t] =>
+            functionOnField(returnType, name)
+        }
+      }
+    }
+  }
 }

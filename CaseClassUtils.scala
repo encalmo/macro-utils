@@ -62,6 +62,45 @@ object CaseClassUtils {
     }
   }
 
+  /** Visit a case class and apply a function to each field using a statements cache without the value term.
+    *
+    * @param tpe
+    *   the type of the case class
+    * @param functionOnField
+    *   the function to apply to each field
+    * @param cache
+    *   implicit statements cache to store the generated code
+    * @return
+    *   Unit
+    */
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionOnField: (
+          cache.quotes.reflect.TypeRepr, // type of the field
+          String, // name of the field
+          Set[AnnotationInfo] // annotations
+      ) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    {
+      val parentTpe = TypeUtils.underlyingTypeRepr(tpe) match {
+        case Left(tpe)  => tpe
+        case Right(tpe) => tpe
+      }
+      parentTpe.typeSymbol.caseFields
+        .map { caseField =>
+          val fieldTpe = tpe.memberType(caseField)
+          functionOnField.apply(
+            fieldTpe,
+            caseField.name,
+            AnnotationUtils.computeFieldAnnotations(parentTpe, caseField.name)
+          )
+        }
+    }
+  }
+
   /** Create an instance of a case class using its primary constructor.
     *
     * @param args

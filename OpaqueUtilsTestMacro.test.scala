@@ -61,4 +61,41 @@ object OpaqueUtilsTestMacro {
     Expr(findBaseTypeFromApply(TypeRepr.of[A]).map(_.show(using Printer.TypeReprShortCode)).getOrElse("<none>"))
   }
 
+  inline def testVisitTermless[A]: String = {
+    ${ testVisitTermlessMethodImpl[A] }
+  }
+
+  def testVisitTermlessMethodImpl[A: Type](using Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitTermlessMethod2Impl[A]
+  }
+
+  def testVisitTermlessMethod2Impl[A: Type](using cache: StatementsCache): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    visitTermless(
+      "opaque",
+      TypeRepr.of[A],
+      functionWhenOpaqueType = { (tpe, name) =>
+        cache.put(
+          StringUtils.concat(
+            Literal(StringConstant("opaque type with an upper bound of ")),
+            Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+          )
+        )
+      },
+      functionOtherwise = { (tpe, name) =>
+        cache.put(
+          StringUtils.concat(
+            Literal(StringConstant("not an opaque type ")),
+            Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+          )
+        )
+      }
+    )
+
+    cache.asExprOf[String]
+  }
+
 }

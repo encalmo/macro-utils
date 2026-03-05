@@ -82,4 +82,44 @@ object CaseClassUtilsTestMacro {
     cache.asExprOfUnit
   }
 
+  inline def testVisitTermless[T]: List[String] = ${ testVisitTermlessImpl[T] }
+
+  def testVisitTermlessImpl[T: Type](using Quotes): Expr[List[String]] = {
+    given StatementsCache = new StatementsCache
+    testVisitTermless2Impl[T]
+  }
+
+  def testVisitTermless2Impl[T: Type](using cache: StatementsCache): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    val tpe = TypeRepr.of[T]
+    tpe match {
+      case TypeReprIsCaseClass() =>
+        CaseClassUtils.visitTermless(using cache)(
+          tpe,
+          { (tpe, name, annotations) =>
+            cache.put {
+              val messageTerm =
+                StringUtils.concat(
+                  Literal(StringConstant(annotations.map(_.toString).mkString(", "))),
+                  Literal(StringConstant(name)),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+                )
+              MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+            }
+          }
+        )
+      case _ =>
+        '{}
+    }
+
+    cache.asExprOf(
+      bufferRef.methodCall("toList", Nil).asExprOf[List[String]]
+    )
+  }
+
 }

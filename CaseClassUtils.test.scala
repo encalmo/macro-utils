@@ -77,4 +77,32 @@ class CaseClassUtilsSpec extends munit.FunSuite {
     printCaseClassFields2(Person("Alice", 30))
   }
 
+  test("visit a case class without value term") {
+    assertEquals(
+      testVisitTermless[Entity],
+      List(
+        "name: String",
+        "@foo(name=bar)age: Int",
+        "emails: List[String]"
+      )
+    )
+  }
+
+  test("visit a generic case class without value term") {
+    assertEquals(
+      testVisitTermless[Example[Int, String]],
+      List(
+        "a: Int",
+        "b: String"
+      )
+    )
+  }
+
+  test("visit not a case class without value term") {
+    assertEquals(
+      testVisitTermless[String],
+      Nil
+    )
+  }
+
 }

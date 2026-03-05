@@ -98,4 +98,45 @@ object TupleUtilsTestMacro {
     }
     cache.asExprOf[(A, B)]
   }
+
+  inline def testVisitTermlessMethod[A]: List[String] = {
+    ${ testVisitTermlessMethodImpl[A] }
+  }
+
+  def testVisitTermlessMethodImpl[A: Type](using Quotes): Expr[List[String]] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitTermlessMethod2Impl[A]
+  }
+
+  def testVisitTermlessMethod2Impl[A: Type](using cache: StatementsCache): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    TypeRepr.of[A] match {
+      case TypeReprIsTuple() =>
+
+        TupleUtils.visitTermless(using cache)(
+          TypeRepr.of[A],
+          functionOnItem = { (tpe, index) =>
+            {
+              cache.put {
+                val messageTerm = StringUtils.concat(
+                  Literal(StringConstant("tuple element at ")),
+                  Literal(IntConstant(index)),
+                  Literal(StringConstant(": ")),
+                  Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+                )
+                MethodUtils.methodCall(bufferRef, "append", List(messageTerm))
+              }
+            }
+          }
+        )
+    }
+
+    cache.asExprOf(
+      MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil).asExprOf[List[String]]
+    )
+  }
 }

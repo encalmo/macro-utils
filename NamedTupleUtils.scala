@@ -30,7 +30,6 @@ object NamedTupleUtils {
   def collect[In: Type](using
       quotes: Quotes
   )(
-      label: Option[Expr[String]],
       valueExpr: Expr[In],
       functionOnField: [A: Type] => Quotes ?=> (
           Option[Expr[String]],
@@ -79,7 +78,6 @@ object NamedTupleUtils {
   def visit(using
       cache: StatementsCache
   )(
-      label: Option[String],
       tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
       functionOnField: (
@@ -92,10 +90,10 @@ object NamedTupleUtils {
     given cache.quotes.type = cache.quotes
     import cache.quotes.reflect.*
 
-    tpe.asType match {
+    tpe.dealias.asType match {
       case '[NamedTuple.AnyNamedTuple] =>
         val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
-        tpe.dealias match {
+        tpe.dealias.widen match {
           case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
             nameTypeList
               .zip(valueTypeList)
@@ -108,6 +106,48 @@ object NamedTupleUtils {
                     Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
                     List(Literal(IntConstant(index)))
                   ).callAsInstanceOf(Inferred(valueTpe)),
+                  index
+                )
+              }
+          case _ => ()
+        }
+
+      case _ => ()
+    }
+  }
+
+  /** Visit a named tuple using a statements cache.
+    *
+    * @param functionExpr
+    * @param cache
+    * @return
+    *   Unit
+    */
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionOnField: (
+          cache.quotes.reflect.TypeRepr,
+          String,
+          Int
+      ) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    tpe.dealias.asType match {
+      case '[NamedTuple.AnyNamedTuple] =>
+        val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
+        tpe.dealias.widen match {
+          case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
+            nameTypeList
+              .zip(valueTypeList)
+              .zipWithIndex
+              .foreach { case ((nameTpe, valueTpe), index) =>
+                functionOnField(
+                  valueTpe,
+                  TypeNameUtils.shortBaseName(nameTpe.show(using Printer.TypeReprShortCode)),
                   index
                 )
               }
