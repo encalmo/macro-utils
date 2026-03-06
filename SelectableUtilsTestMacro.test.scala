@@ -80,4 +80,55 @@ object SelectableUtilsTestMacro {
     Expr(buffer.mkString(", "))
   }
 
+  inline def testMaybeVisitTermlessSelectable[T]: String = {
+    ${ testMaybeVisitTermlessSelectableImpl[T] }
+  }
+
+  def testMaybeVisitTermlessSelectableImpl[T: Type](using Quotes): Expr[String] = {
+    given StatementsCache = new StatementsCache
+    testMaybeVisitTermlessSelectable2Impl[T]
+  }
+
+  def testMaybeVisitTermlessSelectable2Impl[T: Type](using cache: StatementsCache): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    TypeRepr.of[T] match {
+      case TypeReprIsSelectable(fieldsTpe) =>
+
+        maybeVisitSelectable(
+          TypeRepr.of[T],
+          functionWhenSelectable = { fieldsTpe =>
+            visitFieldsTermless(using cache)(
+              fieldsTpe,
+              functionOnField = { (tpe, name) =>
+                cache.put {
+                  val messageTerm =
+                    StringUtils.concat(
+                      Literal(StringConstant(name)),
+                      Literal(StringConstant(": ")),
+                      Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+                    )
+                  MethodUtils.methodCall(using cache)(bufferRef, "append", List(messageTerm))
+                }
+              }
+            )
+          }
+        )
+      case _ => ()
+    }
+
+    cache.asExprOf(
+      MethodUtils
+        .methodCall(
+          targetTerm = MethodUtils.methodCall(targetTerm = bufferRef, methodName = "toList", argTerms = Nil),
+          methodName = "mkString",
+          argTerms = List(Literal(StringConstant(", ")))
+        )
+        .asExprOf[String]
+    )
+  }
+
 }

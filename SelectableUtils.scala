@@ -154,4 +154,33 @@ object SelectableUtils {
         '{}
     }
   }
+
+  /** Visit the fields of a Selectable and apply a function to each field using a statements cache, without using a
+    * value term.
+    */
+  def visitFieldsTermless(using
+      cache: StatementsCache
+  )(
+      fieldsTpe: cache.quotes.reflect.TypeRepr,
+      functionOnField: (cache.quotes.reflect.TypeRepr, String) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    fieldsTpe.dealias match {
+      case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
+        nameTypeList
+          .zip(valueTypeList)
+          .zipWithIndex
+          .map { case ((nameType, valueTpe), index) =>
+            val name = TypeNameUtils.shortBaseName(nameType.show(using Printer.TypeReprShortCode))
+            functionOnField(
+              valueTpe,
+              name
+            )
+          }
+
+      case _ => '{}
+    }
+  }
 }

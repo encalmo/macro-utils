@@ -13,6 +13,13 @@ class SelectableUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("visit record without a value term") {
+    assertEquals(
+      testMaybeVisitTermlessSelectable[FactsRow],
+      "name: String, age: Int, email: String"
+    )
+  }
+
   test("transform record") {
     assertEquals(
       testMaybeTransformSelectableIntoBlockOfUnit(entity),
