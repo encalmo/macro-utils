@@ -66,4 +66,26 @@ class EnumUtilsSpec extends munit.FunSuite {
     assertEquals(testIsEnumOrSealedADT[EmptyTuple], false)
   }
 
+  test("visitTermless") {
+    assertEquals(visitTermless[Entity], "case class Dog, value case Cow")
+    assertEquals(visitTermless[Planes], "case class Boeing, case class Airbus")
+    assertEquals(
+      visitTermless[Hobby],
+      "value case Reading, value case Swimming, value case Cycling, value case Cooking, case class Other"
+    )
+    assertEquals(
+      visitTermless[Cars],
+      "value case Ford, value case Toyota, value case Honda, value case Nissan, case class Other"
+    )
+    assertEquals(visitTermless[Boats], "")
+    assertEquals(
+      visitTermless[Benefit],
+      "value case ChildBenefit, value case UniversalCredit, value case JobSeekersAllowance, value case EmploymentSupportAllowance, value case HousingBenefit, value case PensionCredit, case class Other"
+    )
+    assertEquals(
+      visitTermless[MaritalStatus],
+      "value case Single, case class CivilPartnership, case class Married, case class Divorced, case class Widowed"
+    )
+  }
+
 }

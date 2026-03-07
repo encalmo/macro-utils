@@ -54,4 +54,56 @@ object EnumUtilsTestMacro {
     result.asExprOf[String]
   }
 
+  inline def visitTermless[T]: String = {
+    ${ visitTermlessImpl[T] }
+  }
+
+  def visitTermlessImpl[T: Type](using quotes: Quotes): Expr[String] = {
+    given cache: StatementsCache = new StatementsCache
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    visitTermlessUsingTypeTreeIterator(using cache)(tpe = TypeRepr.of[T])
+  }
+
+  def visitTermlessUsingTypeTreeIterator(using
+      cache: StatementsCache
+  )(tpe: cache.quotes.reflect.TypeRepr): Expr[String] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+    EnumUtils.visitTermless(using cache)(
+      tpe = tpe,
+      functionWhenCaseValue = { (tpe, name, annotations) =>
+        cache.put {
+          bufferRef.methodCall(
+            "append",
+            List(
+              StringUtils.concat(
+                Literal(StringConstant("value case ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+              )
+            )
+          )
+        }
+      },
+      functionWhenCaseClass = { (tpe, name, annotations) =>
+        cache.put {
+          bufferRef.methodCall(
+            "append",
+            List(
+              StringUtils.concat(
+                Literal(StringConstant("case class ")),
+                Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))
+              )
+            )
+          )
+        }
+      }
+    )
+    cache.put {
+      bufferRef.methodCall("mkString", List(Literal(StringConstant(", "))))
+    }
+    cache.asExprOf[String]
+  }
+
 }

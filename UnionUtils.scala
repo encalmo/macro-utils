@@ -67,4 +67,20 @@ object UnionUtils {
     Match(valueTerm, matchCaseDefs)
   }
 
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionOnCase: cache.quotes.reflect.TypeRepr => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    val matchCaseDefs =
+      TypeUtils
+        .inspectUnionType(tpe)
+        .getOrElse(Nil)
+        .foreach { tpe =>
+          functionOnCase(tpe)
+        }
+  }
+
 }

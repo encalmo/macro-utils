@@ -166,24 +166,21 @@ object EnumUtils {
             }
 
           val matchCaseBody =
-            tpe.asType match {
-              case '[t] =>
-                if (enumCase.isTerm)
-                then
-                  functionWhenCaseValue(
-                    tpe,
-                    enumCase.name,
-                    Ref(enumCase),
-                    enumCaseSymbol.annotations.computeInfo
-                  )
-                else
-                  functionWhenCaseClass(
-                    tpe,
-                    enumCase.name,
-                    Ref(bindSym),
-                    enumCaseSymbol.annotations.computeInfo
-                  )
-            }
+            if (enumCase.isTerm)
+            then
+              functionWhenCaseValue(
+                tpe,
+                enumCase.name,
+                Ref(enumCase),
+                enumCaseSymbol.annotations.computeInfo
+              )
+            else
+              functionWhenCaseClass(
+                tpe,
+                enumCase.name,
+                Ref(bindSym),
+                enumCaseSymbol.annotations.computeInfo
+              )
 
           CaseDef(matchCasePattern, None, matchCaseBody)
         }
@@ -192,4 +189,74 @@ object EnumUtils {
     } else report.errorAndAbort(s"The type ${tpe.show} is not an enum or sealed ADT")
   }
 
+  def visitTermless(using
+      cache: StatementsCache
+  )(
+      tpe: cache.quotes.reflect.TypeRepr,
+      functionWhenCaseValue: (
+          cache.quotes.reflect.TypeRepr,
+          String,
+          Set[AnnotationInfo]
+      ) => Unit,
+      functionWhenCaseClass: (
+          cache.quotes.reflect.TypeRepr,
+          String,
+          Set[AnnotationInfo]
+      ) => Unit
+  ): Unit = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val enumType = tpe.dealias
+    val enumSymbol = enumType.typeSymbol
+    val enumCompanion = enumSymbol.companionModule
+
+    def enumCases: List[Symbol] = {
+      if enumSymbol.flags.is(Flags.JavaDefined)
+        && enumSymbol.flags.is(Flags.Enum)
+      then
+        enumSymbol.companionModule.moduleClass.declarations
+          .filter { member => member.flags.is(Flags.Enum) }
+      else if enumSymbol.flags.is(Flags.Sealed)
+        && (enumSymbol.flags.is(Flags.Enum) || enumSymbol.flags.is(Flags.Trait))
+      then enumSymbol.children
+      else Nil
+    }
+
+    if !enumCases.isEmpty
+    then
+      enumCases.foreach { enumCase =>
+        val isEnumCaseValue = enumCompanion.declaredField(enumCase.name).exists
+        val isEnumCaseType = enumCompanion.declaredType(enumCase.name).nonEmpty
+        val isJavaEnumCase = enumCase.flags.is(Flags.JavaDefined) && enumCase.flags.is(Flags.Enum)
+
+        val enumCaseSymbol =
+          if isEnumCaseType
+          then enumCompanion.declaredType(enumCase.name).headOption.get
+          else if isEnumCaseValue
+          then enumCompanion.declaredField(enumCase.name)
+          else enumCase
+
+        val tpe =
+          if isEnumCaseType
+          then TypeSelect(Ref(enumCompanion), enumCase.name).tpe
+          else if isEnumCaseValue
+          then Select(Ref(enumCompanion), enumCase).tpe
+          else enumCase.typeRef
+
+        if (enumCase.isTerm)
+        then
+          functionWhenCaseValue(
+            tpe,
+            enumCase.name,
+            enumCaseSymbol.annotations.computeInfo
+          )
+        else
+          functionWhenCaseClass(
+            tpe,
+            enumCase.name,
+            enumCaseSymbol.annotations.computeInfo
+          )
+      }
+  }
 }

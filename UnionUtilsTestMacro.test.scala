@@ -97,4 +97,37 @@ object UnionUtilsTestMacro {
     result.asExprOf[String]
   }
 
+  inline def testVisitTermlessMethod[A]: List[String] = {
+    ${ testVisitTermlessMethodImpl[A] }
+  }
+
+  def testVisitTermlessMethodImpl[A: Type](using Quotes): Expr[List[String]] = {
+    given cache: StatementsCache = new StatementsCache
+    testVisitTermlessMethod2Impl[A]
+  }
+
+  def testVisitTermlessMethod2Impl[A: Type](using cache: StatementsCache): Expr[List[String]] = {
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+
+    val bufferRef = cache.getValueRefOfExpr("buffer", '{ collection.mutable.ListBuffer.empty[String] })
+
+    TypeRepr.of[A] match {
+      case TypeReprIsUnion(tpes) =>
+        UnionUtils.visitTermless(using cache)(
+          TypeRepr.of[A],
+          functionOnCase = { tpe =>
+            cache.put {
+              bufferRef.methodCall("append", List(Literal(StringConstant(tpe.show(using Printer.TypeReprShortCode)))))
+            }
+          }
+        )
+      case _ =>
+        '{}
+    }
+
+    cache.asExprOf(
+      bufferRef.methodCall("toList", Nil).asExprOf[List[String]]
+    )
+  }
 }

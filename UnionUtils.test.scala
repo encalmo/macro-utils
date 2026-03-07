@@ -72,4 +72,16 @@ class UnionUtilsSpec extends munit.FunSuite {
     )
   }
 
+  test("visitTermless") {
+    type Union = String | Int | Boolean
+    assertEquals(
+      testVisitTermlessMethod[Union],
+      List(
+        "String",
+        "Int",
+        "Boolean"
+      )
+    )
+  }
+
 }
