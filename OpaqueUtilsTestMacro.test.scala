@@ -19,10 +19,9 @@ object OpaqueUtilsTestMacro {
     import cache.quotes.reflect.*
 
     visit(
-      "opaque",
       TypeRepr.of[A],
       valueExpr.asTerm,
-      functionWhenOpaqueType = { (tpe, name, value) =>
+      functionWhenUpperBound = { (tpe, value) =>
         cache.put(
           StringUtils.concat(
             Literal(StringConstant("opaque type with an upper bound of ")),
@@ -30,7 +29,7 @@ object OpaqueUtilsTestMacro {
           )
         )
       },
-      functionOtherwise = { (tpe, name, value) =>
+      functionOtherwise = { (tpe, value) =>
         cache.put(
           StringUtils.concat(
             Literal(StringConstant("not an opaque type ")),
@@ -75,9 +74,8 @@ object OpaqueUtilsTestMacro {
     import cache.quotes.reflect.*
 
     visitTermless(
-      "opaque",
       TypeRepr.of[A],
-      functionWhenOpaqueType = { (tpe, name) =>
+      functionWhenUpperBound = { (tpe) =>
         cache.put(
           StringUtils.concat(
             Literal(StringConstant("opaque type with an upper bound of ")),
@@ -85,7 +83,7 @@ object OpaqueUtilsTestMacro {
           )
         )
       },
-      functionOtherwise = { (tpe, name) =>
+      functionOtherwise = { (tpe) =>
         cache.put(
           StringUtils.concat(
             Literal(StringConstant("not an opaque type ")),

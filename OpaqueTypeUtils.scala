@@ -154,23 +154,21 @@ object OpaqueTypeUtils {
   def visit(using
       cache: StatementsCache
   )(
-      label: String,
       tpe: cache.quotes.reflect.TypeRepr,
       valueTerm: cache.quotes.reflect.Term,
-      functionWhenOpaqueType: (
+      functionWhenUpperBound: (
           cache.quotes.reflect.TypeRepr,
-          String,
           cache.quotes.reflect.Term
       ) => Unit,
-      functionOtherwise: (cache.quotes.reflect.TypeRepr, String, cache.quotes.reflect.Term) => Unit
+      functionOtherwise: (cache.quotes.reflect.TypeRepr, cache.quotes.reflect.Term) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
 
     TypeUtils
       .underlyingTypeRepr(tpe)
       .match {
-        case Left((tpe)) => functionWhenOpaqueType(tpe, label, valueTerm)
-        case _           => functionOtherwise(tpe, label, valueTerm)
+        case Left((tpe)) => functionWhenUpperBound(tpe, valueTerm)
+        case _           => functionOtherwise(tpe, valueTerm)
       }
   }
 
@@ -185,21 +183,17 @@ object OpaqueTypeUtils {
   def visitTermless(using
       cache: StatementsCache
   )(
-      label: String,
       tpe: cache.quotes.reflect.TypeRepr,
-      functionWhenOpaqueType: (
-          cache.quotes.reflect.TypeRepr,
-          String
-      ) => Unit,
-      functionOtherwise: (cache.quotes.reflect.TypeRepr, String) => Unit
+      functionWhenUpperBound: (cache.quotes.reflect.TypeRepr) => Unit,
+      functionOtherwise: (cache.quotes.reflect.TypeRepr) => Unit
   ): Unit = {
     given cache.quotes.type = cache.quotes
 
     TypeUtils
       .underlyingTypeRepr(tpe)
       .match {
-        case Left((tpe)) => functionWhenOpaqueType(tpe, label)
-        case _           => functionOtherwise(tpe, label)
+        case Left((upperBoundTpe)) => functionWhenUpperBound(upperBoundTpe)
+        case _                     => functionOtherwise(tpe)
       }
   }
 
