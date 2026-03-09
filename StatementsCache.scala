@@ -422,8 +422,8 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
     else if statements.size == 1
     then
       statements.head match {
-        case term: Term if term.tpe <:< TypeRepr.of[T] => term.asExprOf[T]
-        case term: Term                                =>
+        case term: Term if term.tpe =:= TypeRepr.of[T] || term.tpe <:< TypeRepr.of[T] => term.asExprOf[T]
+        case term: Term                                                               =>
           report.errorAndAbort(
             "[" + cacheId + "] Expected first statement to be a term of type " + TypeRepr
               .of[T]
@@ -436,7 +436,7 @@ class StatementsCache(val cacheId: String = "default")(implicit val quotes: Quot
       }
     else
       statements.last match {
-        case term: Term if term.tpe <:< TypeRepr.of[T] =>
+        case term: Term if term.tpe =:= TypeRepr.of[T] || term.tpe <:< TypeRepr.of[T] =>
           Block(statements.init.toList, term).asExprOf[T]
         case term: Term =>
           report.errorAndAbort(
