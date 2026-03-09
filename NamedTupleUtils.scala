@@ -92,25 +92,33 @@ object NamedTupleUtils {
 
     tpe.dealias.asType match {
       case '[NamedTuple.AnyNamedTuple] =>
-        val productElementMethodSym = MethodUtils.findMethodByArity(TypeRepr.of[Product], "productElement", 1)
-        tpe.dealias.widen match {
-          case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
-            nameTypeList
-              .zip(valueTypeList)
-              .zipWithIndex
-              .foreach { case ((nameTpe, valueTpe), index) =>
-                functionOnField(
-                  valueTpe,
-                  TypeNameUtils.shortBaseName(nameTpe.show(using Printer.TypeReprShortCode)),
-                  Apply(
-                    Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
-                    List(Literal(IntConstant(index)))
-                  ).callAsInstanceOf(Inferred(valueTpe)),
-                  index
-                )
-              }
-          case _ => ()
-        }
+        MethodUtils
+          .findMethodByArity(TypeRepr.of[Product], "productElement", 1)
+          .map { productElementMethodSym =>
+            tpe.dealias.widen match {
+              case AppliedType(_, List(AppliedType(_, nameTypeList), AppliedType(_, valueTypeList))) =>
+                nameTypeList
+                  .zip(valueTypeList)
+                  .zipWithIndex
+                  .foreach { case ((nameTpe, valueTpe), index) =>
+                    functionOnField(
+                      valueTpe,
+                      TypeNameUtils.shortBaseName(nameTpe.show(using Printer.TypeReprShortCode)),
+                      Apply(
+                        Select(valueTerm.callAsInstanceOf[Product], productElementMethodSym),
+                        List(Literal(IntConstant(index)))
+                      ).callAsInstanceOf(Inferred(valueTpe)),
+                      index
+                    )
+                  }
+              case _ => ()
+            }
+          }
+          .getOrElse {
+            report.errorAndAbort(
+              s"Method 'productElement' with 1 argument not found in Product type"
+            )
+          }
 
       case _ => ()
     }

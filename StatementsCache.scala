@@ -486,17 +486,24 @@ object StatementsCache {
 
   extension (using cache: StatementsCache)(term: cache.quotes.reflect.Term) {
 
-    def applyToString: cache.quotes.reflect.Term =
+    inline def applyToString: cache.quotes.reflect.Term =
       StringUtils.applyToString(using cache)(term)
 
-    def methodCall(
+    inline def methodCall(
         methodName: String,
         args: List[cache.quotes.reflect.Term],
         moreArgs: List[cache.quotes.reflect.Term]*
     ): cache.quotes.reflect.Term =
       MethodUtils.methodCall(term, methodName, args, moreArgs*)
 
-    def callAsInstanceOf[T: Type]: cache.quotes.reflect.Term =
+    inline def maybeMethodCall(
+        methodName: String,
+        args: List[cache.quotes.reflect.Term],
+        moreArgs: List[cache.quotes.reflect.Term]*
+    ): Option[cache.quotes.reflect.Term] =
+      MethodUtils.maybeMethodCall(term, methodName, args, moreArgs*)
+
+    inline def callAsInstanceOf[T: Type]: cache.quotes.reflect.Term =
       import cache.quotes.reflect.*
       val asInstanceOfSym = defn.AnyClass.methodMember("asInstanceOf").head
       TypeApply(
@@ -504,7 +511,7 @@ object StatementsCache {
         List(TypeTree.of[T])
       )
 
-    def callAsInstanceOf(typeTree: cache.quotes.reflect.TypeTree): cache.quotes.reflect.Term =
+    inline def callAsInstanceOf(typeTree: cache.quotes.reflect.TypeTree): cache.quotes.reflect.Term =
       import cache.quotes.reflect.*
       val asInstanceOfSym = defn.AnyClass.methodMember("asInstanceOf").head
       TypeApply(
@@ -515,13 +522,13 @@ object StatementsCache {
 
   extension (term: Any) {
 
-    def toTermOf(other: StatementsCache): other.quotes.reflect.Term =
+    inline def toTermOf(other: StatementsCache): other.quotes.reflect.Term =
       term.asInstanceOf[other.quotes.reflect.Term]
 
-    def toTerm(using nested: StatementsCache): nested.quotes.reflect.Term =
+    inline def toTerm(using nested: StatementsCache): nested.quotes.reflect.Term =
       term.asInstanceOf[nested.quotes.reflect.Term]
 
-    def toTypeRepr(using nested: StatementsCache): nested.quotes.reflect.TypeRepr =
+    inline def toTypeRepr(using nested: StatementsCache): nested.quotes.reflect.TypeRepr =
       term.asInstanceOf[nested.quotes.reflect.TypeRepr]
   }
 }

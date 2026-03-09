@@ -151,6 +151,29 @@ object MethodUtils {
   /** Dynamically calls a method on 'target' with the given name and arguments. Adds the method call to the statements
     * cache and returns it.
     */
+  def maybeMethodCall(using
+      cache: StatementsCache
+  )(
+      targetTerm: cache.quotes.reflect.Term,
+      methodName: String,
+      argTerms: List[cache.quotes.reflect.Term],
+      moreArgTerms: List[cache.quotes.reflect.Term]*
+  ): Option[cache.quotes.reflect.Term] = {
+    val tpe = targetTerm.tpe.dealias.widen
+    if (moreArgTerms.isEmpty)
+    then {
+      findMethodByArity(tpe, methodName, argTerms.size)
+        .map { methodSymbol =>
+          buildMethodCall(targetTerm, methodSymbol, argTerms)
+        }
+    } else {
+      findMethodByArities(tpe, methodName, argTerms.size :: moreArgTerms.toList.map(_.size))
+        .map { methodSymbol =>
+          buildMethodCall(targetTerm, methodSymbol, argTerms ++ moreArgTerms.flatten)
+        }
+    }
+  }
+
   def methodCall(using
       cache: StatementsCache
   )(
@@ -159,14 +182,12 @@ object MethodUtils {
       argTerms: List[cache.quotes.reflect.Term],
       moreArgTerms: List[cache.quotes.reflect.Term]*
   ): cache.quotes.reflect.Term = {
-    val tpe = targetTerm.tpe.dealias.widen
-    if (moreArgTerms.isEmpty)
-    then {
-      val methodSymbol = findMethodByArity(tpe, methodName, argTerms.size)
-      buildMethodCall(targetTerm, methodSymbol, argTerms)
-    } else {
-      val methodSymbol = findMethodByArities(tpe, methodName, argTerms.size :: moreArgTerms.toList.map(_.size))
-      buildMethodCall(targetTerm, methodSymbol, argTerms ++ moreArgTerms.flatten)
+    given cache.quotes.type = cache.quotes
+    import cache.quotes.reflect.*
+    maybeMethodCall(targetTerm, methodName, argTerms, moreArgTerms*).getOrElse {
+      report.errorAndAbort(
+        s"Method '$methodName' with ${argTerms.size} arguments not found in ${targetTerm.tpe.dealias.widen.show}"
+      )
     }
   }
 
@@ -176,24 +197,20 @@ object MethodUtils {
       tpe: cache.quotes.reflect.TypeRepr,
       name: String,
       arity: Int
-  ): cache.quotes.reflect.Symbol = {
+  ): Option[cache.quotes.reflect.Symbol] = {
     import cache.quotes.reflect.*
 
     val clsSym = tpe.typeSymbol
     val candidates = clsSym.methodMember(name)
 
     // Filter by argument count (ignoring type parameters like [T])
-    val matched = candidates.find { sym =>
+    candidates.find { sym =>
       val valueParamLists = sym.paramSymss.filterNot { clause =>
         clause.headOption.exists(_.isType)
       }
       // Sum up arguments across all curried lists: (a: Int)(b: Int) = 2 args
       val totalArgs = valueParamLists.flatten.size
       totalArgs == arity
-    }
-
-    matched.getOrElse {
-      report.errorAndAbort(s"Method '$name' with $arity arguments not found in ${tpe.show}")
     }
   }
 
@@ -203,14 +220,14 @@ object MethodUtils {
       tpe: cache.quotes.reflect.TypeRepr,
       name: String,
       arities: List[Int]
-  ): cache.quotes.reflect.Symbol = {
+  ): Option[cache.quotes.reflect.Symbol] = {
     import cache.quotes.reflect.*
 
     val clsSym = tpe.typeSymbol
     val candidates = clsSym.methodMember(name)
 
     // Filter by argument count (ignoring type parameters like [T])
-    val matched = candidates.find { sym =>
+    candidates.find { sym =>
       val valueParamLists = sym.paramSymss
         .filterNot { clause =>
           clause.headOption.exists(_.isType)
@@ -220,10 +237,6 @@ object MethodUtils {
       && valueParamLists
         .zip(arities)
         .forall { (valueParamList, arity) => valueParamList.size == arity }
-    }
-
-    matched.getOrElse {
-      report.errorAndAbort(s"Method '$name' with ${arities.mkString(", ")} arguments not found in ${tpe.show}")
     }
   }
 
